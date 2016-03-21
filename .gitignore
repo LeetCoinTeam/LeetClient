@@ -45,3 +45,10 @@ $RECYCLE.BIN/
 Network Trash Folder
 Temporary Items
 .apdisk
+Binaries/Mac/UE4Editor-BCBlueprintSupport.dylib
+Binaries/Mac/UE4Editor-OnlineSubsystemBrainCloud.dylib
+
+
+#UE4 Build stuff
+Binaries/*
+Intermediate/*

@@ -1,0 +1,28 @@
+{
+	"FileVersion": 3,
+	"Version": 8,
+	"VersionName": "2.0.0",
+	"FriendlyName": "Leet",
+	"Description": "LEET connects games with money.",
+	"Category": "Network",
+	"CreatedBy": "Leetcoin Inc.",
+	"CreatedByURL": "http://leet.gg",
+	"DocsURL": "http://leet.gg/",
+	"MarketplaceURL": "",
+	"SupportURL": "http://leet.gg",
+  "Modules": [
+    {
+			"Name": "LeetClientPlugin",
+			"Type": "Runtime",
+			"LoadingPhase": "PreDefault"
+		},{
+      "Name": "OnlineSubsystemLeet",
+      "Type": "Runtime",
+      "LoadingPhase": "PreDefault"
+    }
+  ],
+	"EnabledByDefault": false,
+	"CanContainContent": false,
+	"IsBetaVersion": false,
+	"Installed": false
+}
