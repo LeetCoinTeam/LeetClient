@@ -9,11 +9,12 @@
 /**
  * Example of declaring a UObject in a plugin module
  */
-//UCLASS()
-//class LEETCLIENTPLUGIN_API ULeetClient : public UObject
-class ULeetClient 
+
+//class ULeetClient 
+UCLASS()
+class LEETCLIENTPLUGIN_API ULeetClient : public UObject
 {
-	//GENERATED_UCLASS_BODY()
+	GENERATED_UCLASS_BODY()
 
 public:
 
