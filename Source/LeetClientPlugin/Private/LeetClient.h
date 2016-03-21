@@ -2,7 +2,7 @@
 
 #pragma once
 
-//#include "LeetClient.generated.h"
+#include "LeetClient.generated.h"
 
 // Forward declarations go here
 
