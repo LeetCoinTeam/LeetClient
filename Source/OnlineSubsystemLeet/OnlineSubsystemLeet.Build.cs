@@ -17,13 +17,16 @@ public class OnlineSubsystemLeet : ModuleRules
 				"Sockets",
 				"OnlineSubsystem",
 				"OnlineSubsystemUtils",
-				"Json"
-			}
+				"Json",
+                "JsonUtilities",
+                "LeetClientPlugin",
+                "HTTP"
+            }
 			);
         PrivateIncludePaths.AddRange(
                 new string[] {
                     "LeetClientPlugin/Private",
-                    "LeetClientPlugin/Public",
+                    //"LeetClientPlugin/Public",
 					// ... add other private include paths required here ...
 				}
                 );

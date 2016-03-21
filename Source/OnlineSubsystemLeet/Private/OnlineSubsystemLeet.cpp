@@ -4,7 +4,7 @@
 #include "OnlineSubsystemLeet.h"
 #include "OnlineAsyncTaskManagerLeet.h"
 //#include "../LeetClientPlugin/Public/LeetClient.h"
-//#include "LeetClient.h"
+#include "LeetClient.h"
 #include "OnlineSessionInterfaceLeet.h"
 #include "OnlineLeaderboardInterfaceLeet.h"
 #include "OnlineIdentityLeet.h"

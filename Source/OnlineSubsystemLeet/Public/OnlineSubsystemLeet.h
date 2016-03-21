@@ -17,7 +17,7 @@ typedef TSharedPtr<class FOnlineExternalUILeet, ESPMode::ThreadSafe> FOnlineExte
 typedef TSharedPtr<class FOnlineIdentityLeet, ESPMode::ThreadSafe> FOnlineIdentityLeetPtr;
 typedef TSharedPtr<class FOnlineAchievementsLeet, ESPMode::ThreadSafe> FOnlineAchievementsLeetPtr;
 
-//class LeetClient;
+class ULeetClient;
 
 /**
  *	OnlineSubsystemLeet - Implementation of the online subsystem for Leet services

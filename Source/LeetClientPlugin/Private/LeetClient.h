@@ -22,7 +22,21 @@ private:
 	FString serverSecret;
 	FString serverKey;
 
+	int32 incrementBTC;
+	int32 minimumBTCHold;
+	float serverRakeBTCPercentage;
+	float leetRakePercentage;
+	int32 killRewardBTC;
+
 public:
 
+	void initialize(const FString& apiUrl,
+		const FString& serverSecret,
+		const FString& serverKey);
+
+	static ULeetClient * getInstance();
+
+protected:
+	static ULeetClient * _instance;
 
 };
