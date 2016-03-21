@@ -4,7 +4,7 @@
 #include "OnlineSubsystemLeet.h"
 #include "OnlineAsyncTaskManagerLeet.h"
 //#include "../LeetClientPlugin/Public/LeetClient.h"
-#include "LeetClient.h"
+//#include "LeetClient.h"
 #include "OnlineSessionInterfaceLeet.h"
 #include "OnlineLeaderboardInterfaceLeet.h"
 #include "OnlineIdentityLeet.h"
@@ -165,7 +165,9 @@ bool FOnlineSubsystemLeet::Init()
 			UE_LOG(LogTemp, Log, TEXT("[LEET] Online Subsystem Configs Exist"));
 			FString test = *Configs->Find(TEXT("APIURL"));
 
-			//LeetClient::getInstance()->initialize(
+			ULeetClient* leetClient = ULeetClient::getInstance();
+
+			//ULeetClient::getInstance()->initialize(
 			//	*Configs->Find(TEXT("APIURL")),
 			//	*Configs->Find(TEXT("ServerSecret")),
 			//	*Configs->Find(TEXT("ServerAPIKey")));

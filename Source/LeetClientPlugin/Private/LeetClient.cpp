@@ -1,10 +1,31 @@
 #include "LeetClientPluginPrivatePCH.h"
 #include "LeetClient.h"
 
-ULeetClient::ULeetClient(const class FObjectInitializer& PCIP)
-	: Super(PCIP)
+// Define all static member variables.
+ULeetClient * ULeetClient::_instance = nullptr;
+
+// Constructor for UCLASS
+//ULeetClient::ULeetClient(const class FObjectInitializer& PCIP)
+//	: Super(PCIP)
+//{
+//	//UE_LOG(LogTemp, Log, TEXT("[LEET] Client CONSTRUCT"));
+//	//Reset();
+//}
+
+/**
+* Constructor
+*/
+ULeetClient::ULeetClient()
 {
-	//Reset();
+
+}
+
+/**
+* Destructor
+*/
+ULeetClient::~ULeetClient()
+{
+	_instance = nullptr;
 }
 
 void ULeetClient::initialize(const FString& _apiUrl,
@@ -17,13 +38,17 @@ void ULeetClient::initialize(const FString& _apiUrl,
 	serverKey = _serverKey;
 }
 
-ULeetClient * ULeetClient::_instance = nullptr;
-
-
 ULeetClient * ULeetClient::getInstance()
 {
+	UE_LOG(LogTemp, Log, TEXT("[LEET] Client getInstance"));
+
 	if (_instance == NULL) {
+		UE_LOG(LogTemp, Log, TEXT("[LEET] Client _instance == NULL"));
+		//_instance = NewObject<ULeetClient>(nullptr, ULeetClient*);
+		//_instance = ConstructObject<ULeetClient>(ULeetClient::StaticClass());
+
 		_instance = new ULeetClient();
 	}
 	return _instance;
 }
+

@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "LeetClient.generated.h"
+//#include "LeetClient.generated.h"
 
 // Forward declarations go here
 
@@ -10,11 +10,14 @@
  * Example of declaring a UObject in a plugin module
  */
 
-//class ULeetClient 
-UCLASS()
-class LEETCLIENTPLUGIN_API ULeetClient : public UObject
+
+//UCLASS()
+//class LEETCLIENTPLUGIN_API ULeetClient : public UObject
+class ULeetClient 
 {
-	GENERATED_UCLASS_BODY()
+	//GENERATED_UCLASS_BODY()
+
+	//virtual void BeginDestroy() override;
 
 private:
 
@@ -37,6 +40,10 @@ public:
 	static ULeetClient * getInstance();
 
 protected:
+
+	ULeetClient();
+	~ULeetClient();
 	static ULeetClient * _instance;
+	//ULeetClient * _instance;
 
 };
