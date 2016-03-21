@@ -4,7 +4,8 @@
 //#include "ModuleManager.h"
 //#include "Internationalization.h"
 //#include "Http.h"
-#include "Runtime/Online/HTTP/Public/Http.h"
+#include "Engine.h"
+//#include "Runtime/Online/HTTP/Public/Http.h"
 #include "Json.h"
 #include "Base64.h"
 #include <string>

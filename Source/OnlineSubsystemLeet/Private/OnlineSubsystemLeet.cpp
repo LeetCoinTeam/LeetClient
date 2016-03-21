@@ -4,7 +4,7 @@
 #include "OnlineSubsystemLeet.h"
 #include "OnlineAsyncTaskManagerLeet.h"
 //#include "../LeetClientPlugin/Public/LeetClient.h"
-#include "LeetClient.h"
+//#include "LeetClient.h"
 #include "OnlineSessionInterfaceLeet.h"
 #include "OnlineLeaderboardInterfaceLeet.h"
 #include "OnlineIdentityLeet.h"
@@ -165,10 +165,10 @@ bool FOnlineSubsystemLeet::Init()
 			UE_LOG(LogTemp, Log, TEXT("[LEET] Online Subsystem Configs Exist"));
 			FString test = *Configs->Find(TEXT("APIURL"));
 
-			LeetClient::getInstance()->initialize(
-				*Configs->Find(TEXT("APIURL")),
-				*Configs->Find(TEXT("ServerSecret")),
-				*Configs->Find(TEXT("ServerAPIKey")));
+			//LeetClient::getInstance()->initialize(
+			//	*Configs->Find(TEXT("APIURL")),
+			//	*Configs->Find(TEXT("ServerSecret")),
+			//	*Configs->Find(TEXT("ServerAPIKey")));
 		}
 		else
 		{
@@ -201,7 +201,7 @@ bool FOnlineSubsystemLeet::Init()
 			VoiceInterface = nullptr;
 		}
 
-		_clientPtr = LeetClient::getInstance();
+		//_clientPtr = LeetClient::getInstance();
 	}
 	else
 	{
@@ -269,7 +269,7 @@ bool FOnlineSubsystemLeet::IsEnabled()
 	return true;
 }
 
-LeetClient* FOnlineSubsystemLeet::GetClient()
-{
-	return _clientPtr;
-}
+//LeetClient* FOnlineSubsystemLeet::GetClient()
+//{
+//	return _clientPtr;
+//}

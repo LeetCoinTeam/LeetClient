@@ -17,7 +17,7 @@ typedef TSharedPtr<class FOnlineExternalUILeet, ESPMode::ThreadSafe> FOnlineExte
 typedef TSharedPtr<class FOnlineIdentityLeet, ESPMode::ThreadSafe> FOnlineIdentityLeetPtr;
 typedef TSharedPtr<class FOnlineAchievementsLeet, ESPMode::ThreadSafe> FOnlineAchievementsLeetPtr;
 
-class LeetClient;
+//class LeetClient;
 
 /**
  *	OnlineSubsystemLeet - Implementation of the online subsystem for Leet services
@@ -74,7 +74,7 @@ public:
 	 */
 	bool IsEnabled();
 
-	LeetClient* GetClient();
+	//LeetClient* GetClient();
 
 PACKAGE_SCOPE:
 
@@ -123,7 +123,7 @@ private:
 	/** Online async task thread */
 	class FRunnableThread* OnlineAsyncTaskThread;
 
-	LeetClient* _clientPtr = nullptr;
+	//LeetClient* _clientPtr = nullptr;
 	FString _configPath = "";
 };
 

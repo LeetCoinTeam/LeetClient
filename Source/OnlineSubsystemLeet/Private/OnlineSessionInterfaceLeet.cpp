@@ -9,7 +9,7 @@
 #include "SocketSubsystem.h"
 #include "LANBeacon.h"
 #include "NboSerializerLeet.h"
-#include "LeetClient.h"
+//#include "LeetClient.h"
 
 #include "VoiceInterface.h"
 
