@@ -269,7 +269,7 @@ bool FOnlineSubsystemLeet::IsEnabled()
 	return true;
 }
 
-//LeetClient* FOnlineSubsystemLeet::GetClient()
-//{
-//	return _clientPtr;
-//}
+ULeetClient* FOnlineSubsystemLeet::GetClient()
+{
+	return _clientPtr;
+}

@@ -32,6 +32,8 @@ public:
 	{
 	}
 
+	ULeetClient* GetClient();
+
 	// IOnlineSubsystem
 
 	virtual IOnlineSessionPtr GetSessionInterface() const override;
@@ -125,6 +127,8 @@ private:
 
 	//LeetClient* _clientPtr = nullptr;
 	FString _configPath = "";
+
+	ULeetClient* _clientPtr = nullptr;
 };
 
 typedef TSharedPtr<FOnlineSubsystemLeet, ESPMode::ThreadSafe> FOnlineSubsystemLeetPtr;
