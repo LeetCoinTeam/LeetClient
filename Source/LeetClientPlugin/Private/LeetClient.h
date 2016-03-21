@@ -2,7 +2,7 @@
 
 #pragma once
 
-//#include "LeetClient.generated.h"
+#include "LeetClient.generated.h"
 
 // Forward declarations go here
 
@@ -11,13 +11,19 @@
  */
 
 
-//UCLASS()
-//class LEETCLIENTPLUGIN_API ULeetClient : public UObject
-class ULeetClient 
-{
-	//GENERATED_UCLASS_BODY()
+// hack to try to get non-UCLASS working
+//typedef TSharedPtr<class IHttpRequest> FHttpRequestPtr;
+//typedef TSharedPtr<class IHttpResponse, ESPMode::ThreadSafe> FHttpResponsePtr;
 
-	//virtual void BeginDestroy() override;
+
+//class ULeetClient
+UCLASS()
+class LEETCLIENTPLUGIN_API ULeetClient : public UObject
+{
+	// FOR UCLASS only
+	GENERATED_UCLASS_BODY()
+
+	virtual void BeginDestroy() override;
 
 private:
 
@@ -39,11 +45,16 @@ public:
 
 	static ULeetClient * getInstance();
 
+	//bool GetServerInfo(FString session_host_address, FString session_id);
+	//void GetServerInfoComplete(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded);
+
+
 protected:
 
-	ULeetClient();
-	~ULeetClient();
+	// For non-UCLASS only
+	//ULeetClient();
+	//~ULeetClient();
+
 	static ULeetClient * _instance;
-	//ULeetClient * _instance;
 
 };

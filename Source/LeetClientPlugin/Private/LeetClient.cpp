@@ -5,28 +5,28 @@
 ULeetClient * ULeetClient::_instance = nullptr;
 
 // Constructor for UCLASS
-//ULeetClient::ULeetClient(const class FObjectInitializer& PCIP)
-//	: Super(PCIP)
+ULeetClient::ULeetClient(const class FObjectInitializer& PCIP)
+	: Super(PCIP)
+{
+	//UE_LOG(LogTemp, Log, TEXT("[LEET] Client CONSTRUCT"));
+	//Reset();
+}
+
+/**
+* Constructor for non-UCLASS
+*/
+//ULeetClient::ULeetClient()
 //{
-//	//UE_LOG(LogTemp, Log, TEXT("[LEET] Client CONSTRUCT"));
-//	//Reset();
+//
 //}
 
 /**
-* Constructor
+* Destructor for non-UCLASS
 */
-ULeetClient::ULeetClient()
-{
-
-}
-
-/**
-* Destructor
-*/
-ULeetClient::~ULeetClient()
-{
-	_instance = nullptr;
-}
+//ULeetClient::~ULeetClient()
+//{
+//	_instance = nullptr;
+//}
 
 void ULeetClient::initialize(const FString& _apiUrl,
 	const FString& _serverSecret,
@@ -44,11 +44,18 @@ ULeetClient * ULeetClient::getInstance()
 
 	if (_instance == NULL) {
 		UE_LOG(LogTemp, Log, TEXT("[LEET] Client _instance == NULL"));
+
+		// Trying different ways to return the UCLASS instance
 		//_instance = NewObject<ULeetClient>(nullptr, ULeetClient*);
 		//_instance = ConstructObject<ULeetClient>(ULeetClient::StaticClass());
 
 		_instance = new ULeetClient();
 	}
 	return _instance;
+}
+
+void ULeetClient::BeginDestroy()
+{
+	_instance = NULL;
 }
 
