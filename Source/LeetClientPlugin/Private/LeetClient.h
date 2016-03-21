@@ -16,6 +16,12 @@ class LEETCLIENTPLUGIN_API ULeetClient : public UObject
 {
 	GENERATED_UCLASS_BODY()
 
+private:
+
+	FString apiUrl;
+	FString serverSecret;
+	FString serverKey;
+
 public:
 
 
