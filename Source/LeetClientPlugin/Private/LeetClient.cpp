@@ -59,8 +59,10 @@ ULeetClient * ULeetClient::getInstance()
 		//static ULeetClient* leetclient = NewObject<ULeetClient>(nullptr, ULeetClient::StaticClass()); // Assertion Failed
 		//static ULeetClient* leetclient = NewObject<ULeetClient>(ULeetClient::StaticClass()); // Assertion Failed
 
-		_instance = NewObject<ULeetClient>();
-		_instance->AddToRoot();
+		//_instance = NewObject<ULeetClient>();
+		//_instance->AddToRoot();
+
+		_instance = this;
 
 		// THis worked before it was a UClass.
 		//_instance = new ULeetClient();
