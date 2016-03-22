@@ -44,6 +44,7 @@ public:
 		const FString& serverKey);
 
 	static ULeetClient * getInstance();
+	//ULeetClient * getInstance();
 
 	//bool GetServerInfo(FString session_host_address, FString session_id);
 	//void GetServerInfoComplete(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded);
@@ -55,6 +56,11 @@ protected:
 	//ULeetClient();
 	//~ULeetClient();
 
+	//UPROPERTY()
+	//ULeetClient * _instance;
+
 	static ULeetClient * _instance;
+
+	//UClass *_instance = ULeetClient::StaticClass();
 
 };

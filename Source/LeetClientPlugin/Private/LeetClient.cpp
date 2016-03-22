@@ -49,14 +49,18 @@ ULeetClient * ULeetClient::getInstance()
 		//_instance = NewObject<ULeetClient>(nullptr, ULeetClient*);
 		//ULeetClient* leetclient = NewObject<ULeetClient>(nullptr);  // Assertion fail
 		//ULeetClient* leetclient = NewObject<ULeetClient>(ULeetClient::StaticClass()); // FATAL ERROR
-		//ULeetClient* leetclient = NewObject<ULeetClient>(nullptr, ULeetClient::StaticClass()); // Assertion Failed
-		_instance = NewObject<ULeetClient>(ULeetClient::StaticClass()); // FATAL ERROR
+		
+		//_instance = NewObject<ULeetClient>(ULeetClient::StaticClass()); // FATAL ERROR
 
 		//UClass *LeetClientclass = ULeetClient::StaticClass();
 		//_instance = NewObject<ULeetClient>(LeetClientclass); // FATAL ERROR
 		//_instance = (ULeetClient*)ConstructObject<UObject>(LeetClientclass); // Assertion fail
 
+		//static ULeetClient* leetclient = NewObject<ULeetClient>(nullptr, ULeetClient::StaticClass()); // Assertion Failed
+		//static ULeetClient* leetclient = NewObject<ULeetClient>(ULeetClient::StaticClass()); // Assertion Failed
 
+		_instance = NewObject<ULeetClient>();
+		_instance->AddToRoot();
 
 		// THis worked before it was a UClass.
 		//_instance = new ULeetClient();
@@ -68,4 +72,3 @@ void ULeetClient::BeginDestroy()
 {
 	_instance = NULL;
 }
-
