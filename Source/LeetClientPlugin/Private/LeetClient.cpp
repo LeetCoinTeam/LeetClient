@@ -47,9 +47,20 @@ ULeetClient * ULeetClient::getInstance()
 
 		// Trying different ways to return the UCLASS instance
 		//_instance = NewObject<ULeetClient>(nullptr, ULeetClient*);
-		//_instance = ConstructObject<ULeetClient>(ULeetClient::StaticClass());
+		//ULeetClient* leetclient = NewObject<ULeetClient>(nullptr);  // Assertion fail
+		//ULeetClient* leetclient = NewObject<ULeetClient>(ULeetClient::StaticClass()); // FATAL ERROR
+		//ULeetClient* leetclient = NewObject<ULeetClient>(nullptr, ULeetClient::StaticClass()); // Assertion Failed
+		_instance = NewObject<ULeetClient>(ULeetClient::StaticClass()); // FATAL ERROR
 
-		_instance = new ULeetClient();
+		//UClass *LeetClientclass = ULeetClient::StaticClass();
+		//_instance = NewObject<ULeetClient>(LeetClientclass); // FATAL ERROR
+		//_instance = (ULeetClient*)ConstructObject<UObject>(LeetClientclass); // Assertion fail
+
+
+
+		//_instance = leetclient;
+
+		//_instance = new ULeetClient();
 	}
 	return _instance;
 }

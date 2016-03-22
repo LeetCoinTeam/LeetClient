@@ -167,7 +167,7 @@ bool FOnlineSubsystemLeet::Init()
 
 			ULeetClient* leetClient = ULeetClient::getInstance();
 
-			ULeetClient::getInstance()->initialize(
+			leetClient->initialize(
 				*Configs->Find(TEXT("APIURL")),
 				*Configs->Find(TEXT("ServerSecret")),
 				*Configs->Find(TEXT("ServerAPIKey")));
