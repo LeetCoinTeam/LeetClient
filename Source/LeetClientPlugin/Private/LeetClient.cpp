@@ -5,18 +5,16 @@
 ULeetClient * ULeetClient::_instance = nullptr;
 
 // Constructor for UCLASS
-ULeetClient::ULeetClient(const class FObjectInitializer& PCIP)
-	: Super(PCIP)
+ULeetClient::ULeetClient(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer)
 {
 	UE_LOG(LogTemp, Log, TEXT("[LEET] Client CONSTRUCT"));
 	if (_instance == NULL) {
 		UE_LOG(LogTemp, Log, TEXT("[LEET] Client CONSTRUCT _instance == NULL"));
 		_instance = this;
+		//_instance->AddToRoot();
 	}
-	
-	//_instance->AddToRoot();
 
-	
 	//Reset();
 }
 
@@ -36,22 +34,21 @@ ULeetClient::ULeetClient(const class FObjectInitializer& PCIP)
 //	_instance = nullptr;
 //}
 
-void ULeetClient::initialize(const FString& _apiUrl,
-	const FString& _serverSecret,
-	const FString& _serverKey)
+void ULeetClient::initialize(FString api_url,
+	const FString& server_secret,
+	const FString& server_key)
 {
 	UE_LOG(LogTemp, Log, TEXT("[LEET] Client INIT"));
-	apiUrl = _apiUrl;
-	serverSecret = _serverSecret;
-	serverKey = _serverKey;
+	apiUrl = api_url;
+	serverSecret = server_secret;
+	serverKey = server_key;
 }
 
 ULeetClient * ULeetClient::getInstance()
 {
 	UE_LOG(LogTemp, Log, TEXT("[LEET] Client getInstance"));
-
 	if (_instance == NULL) {
-		UE_LOG(LogTemp, Log, TEXT("[LEET] Client _instance == NULL"));
+		UE_LOG(LogTemp, Log, TEXT("[LEET] Client getInstance _instance == NULL"));
 	}
 	return _instance;
 }

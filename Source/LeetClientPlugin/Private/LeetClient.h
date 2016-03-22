@@ -39,9 +39,9 @@ private:
 
 public:
 
-	void initialize(const FString& apiUrl,
-		const FString& serverSecret,
-		const FString& serverKey);
+	void initialize(FString api_url,
+		const FString& server_secret,
+		const FString& server_key);
 
 	static ULeetClient * getInstance();
 	//ULeetClient * getInstance();

@@ -169,7 +169,7 @@ bool FOnlineSubsystemLeet::Init()
 
 			UE_LOG(LogTemp, Log, TEXT("[LEET] Online Subsystem Got client"));
 
-			leetClient->initialize(
+			ULeetClient::getInstance()->initialize(
 				*Configs->Find(TEXT("APIURL")),
 				*Configs->Find(TEXT("ServerSecret")),
 				*Configs->Find(TEXT("ServerAPIKey")));
