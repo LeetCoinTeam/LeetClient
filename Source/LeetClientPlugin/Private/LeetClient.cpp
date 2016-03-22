@@ -8,10 +8,15 @@ ULeetClient * ULeetClient::_instance = nullptr;
 ULeetClient::ULeetClient(const class FObjectInitializer& PCIP)
 	: Super(PCIP)
 {
-	_instance = this;
+	UE_LOG(LogTemp, Log, TEXT("[LEET] Client CONSTRUCT"));
+	if (_instance == NULL) {
+		UE_LOG(LogTemp, Log, TEXT("[LEET] Client CONSTRUCT _instance == NULL"));
+		_instance = this;
+	}
+	
 	//_instance->AddToRoot();
 
-	//UE_LOG(LogTemp, Log, TEXT("[LEET] Client CONSTRUCT"));
+	
 	//Reset();
 }
 
