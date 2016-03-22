@@ -58,8 +58,7 @@ ULeetClient * ULeetClient::getInstance()
 
 
 
-		//_instance = leetclient;
-
+		// THis worked before it was a UClass.
 		//_instance = new ULeetClient();
 	}
 	return _instance;
