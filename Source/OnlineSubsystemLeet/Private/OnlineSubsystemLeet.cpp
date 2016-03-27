@@ -4,7 +4,7 @@
 #include "OnlineSubsystemLeet.h"
 #include "OnlineAsyncTaskManagerLeet.h"
 //#include "../LeetClientPlugin/Public/LeetClient.h"
-//#include "LeetClient.h"
+#include "ILeetClientPlugin.h"
 #include "OnlineSessionInterfaceLeet.h"
 #include "OnlineLeaderboardInterfaceLeet.h"
 #include "OnlineIdentityLeet.h"
@@ -165,20 +165,11 @@ bool FOnlineSubsystemLeet::Init()
 			UE_LOG(LogTemp, Log, TEXT("[LEET] Online Subsystem Configs Exist"));
 			FString test = *Configs->Find(TEXT("APIURL"));
 
-			ULeetClient* leetClient = ULeetClient::getInstance();
-
-			UE_LOG(LogTemp, Log, TEXT("[LEET] Online Subsystem Got client"));
-
-			if (leetClient == NULL) {
-				UE_LOG(LogTemp, Log, TEXT("[LEET] Online Subsystem Got client but it is NULL"));
-			}
-			else {
-				ULeetClient::getInstance()->initialize(
-					*Configs->Find(TEXT("APIURL")),
-					*Configs->Find(TEXT("ServerSecret")),
-					*Configs->Find(TEXT("ServerAPIKey")));
-			}
-			
+			//LeetClient::getInstance()->initialize(
+			//	*Configs->Find(TEXT("ServerURL")),
+			//	*Configs->Find(TEXT("Secret")),
+			//	*Configs->Find(TEXT("AppID")),
+			//	*Configs->Find(TEXT("Version")));
 		}
 		else
 		{
@@ -210,8 +201,6 @@ bool FOnlineSubsystemLeet::Init()
 		{
 			VoiceInterface = nullptr;
 		}
-
-		//_clientPtr = LeetClient::getInstance();
 	}
 	else
 	{
@@ -277,9 +266,4 @@ bool FOnlineSubsystemLeet::Exec(UWorld* InWorld, const TCHAR* Cmd, FOutputDevice
 bool FOnlineSubsystemLeet::IsEnabled()
 {
 	return true;
-}
-
-ULeetClient* FOnlineSubsystemLeet::GetClient()
-{
-	return _clientPtr;
 }

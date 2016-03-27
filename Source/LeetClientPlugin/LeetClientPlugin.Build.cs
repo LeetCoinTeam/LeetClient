@@ -9,6 +9,7 @@ namespace UnrealBuildTool.Rules
 			PublicIncludePaths.AddRange(
 				new string[] {
 					// ... add public include paths required here ...
+
 				}
 				);
 
@@ -26,7 +27,10 @@ namespace UnrealBuildTool.Rules
 					"Core",
                     "CoreUObject",
                 "Engine",
-                "InputCore", "HTTP", "Json", "JsonUtilities" 
+                "Json",
+                "HTTP",
+                "OnlineSubsystem",
+                "OnlineSubsystemUtils"
 					// ... add other public dependencies that you statically link with here ...
 				}
 				);
@@ -34,7 +38,6 @@ namespace UnrealBuildTool.Rules
 			PrivateDependencyModuleNames.AddRange(
 				new string[]
 				{
-                    "HTTP",
 					// ... add private dependencies that you statically link with here ...
 				}
 				);

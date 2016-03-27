@@ -9,7 +9,6 @@
 #include "SocketSubsystem.h"
 #include "LANBeacon.h"
 #include "NboSerializerLeet.h"
-//#include "LeetClient.h"
 
 #include "VoiceInterface.h"
 
@@ -222,7 +221,6 @@ bool FOnlineSessionLeet::CreateSession(int32 HostingPlayerNum, FName SessionName
 		Session->SessionInfo = MakeShareable(NewSessionInfo);
 
 		// Make Leet API call to register this server online.
-		//LeetSubsystem->GetClient()->GetServerInfo(NewSessionInfo->HostAddr->ToString(true), NewSessionInfo->SessionId.ToString());
 
 		Result = UpdateLANStatus();
 
