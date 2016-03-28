@@ -51,6 +51,9 @@ class LEETCLIENTPLUGIN_API ULeetGameInstance : public UGameInstance
 	int32 minimumBTCHold;
 	float serverRakeBTCPercentage;
 	float leetRakePercentage;
+	// Populated through the online subsystem
+	FString ServerSessionHostAddress;
+	FString ServerSessionID;
 
 	// Constructor declaration
 	//ULeetGameInstance(const FObjectInitializer& ObjectInitializer);
@@ -121,6 +124,8 @@ public:
 	*/
 	bool TravelToSession(int32 ControllerId, FName SessionName);
 
+	bool RegisterNewSession(FString IncServerSessionHostAddress, FString IncServerSessionID);
+
 private:
 	UPROPERTY(config)
 		FString WelcomeScreenMap;
@@ -182,4 +187,15 @@ private:
 
 	/** Called when there is an error trying to travel to a local session */
 	void TravelLocalSessionFailure(UWorld *World, ETravelFailure::Type FailureType, const FString& ErrorString);
+
+protected:
+	/** Delegate for creating a new session */
+	//FOnCreateSessionCompleteDelegate OnCreateSessionCompleteDelegate;
+	/**
+	* Delegate fired when a session create request has completed
+	*
+	* @param SessionName the name of the session this callback is for
+	* @param bWasSuccessful true if the async action completed without error, false if there was an error
+	*/
+	virtual void OnCreateSessionComplete(FName SessionName, bool bWasSuccessful);
 };

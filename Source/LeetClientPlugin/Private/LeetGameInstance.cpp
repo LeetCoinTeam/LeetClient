@@ -18,8 +18,11 @@ ULeetGameInstance::ULeetGameInstance(const FObjectInitializer& ObjectInitializer
 	, bIsOnline(true) // Default to online
 	, bIsLicensed(true) // Default to licensed (should have been checked by OS on boot)
 {
-	UE_LOG(LogTemp, Log, TEXT("[LEET] MY GAME INSTANCE CONSTRUCTOR"));
-	//CurrentState = LeetGameInstanceState::None;
+	UE_LOG(LogTemp, Log, TEXT("[LEET] GAME INSTANCE CONSTRUCTOR"));
+	CurrentState = LeetGameInstanceState::None;
+
+	ServerSessionHostAddress = NULL;
+	ServerSessionID = NULL;
 
 	UE_LOG(LogTemp, Log, TEXT("[LEET] GAME INSTANCE INIT"));
 
@@ -52,7 +55,8 @@ ULeetGameInstance::ULeetGameInstance(const FObjectInitializer& ObjectInitializer
 		UE_LOG(LogTemp, Log, TEXT("Could not find LeetConfig.ini, must Initialize manually!"));
 	}
 
-	GetServerInfo();
+	// I don't think we want this here.
+	//GetServerInfo();
 }
 
 void ULeetGameInstance::Init()
@@ -76,12 +80,13 @@ void ULeetGameInstance::Init()
 	SessionInterface->AddOnSessionFailureDelegate_Handle(FOnSessionFailureDelegate::CreateUObject(this, &ULeetGameInstance::HandleSessionFailure));
 
 	OnEndSessionCompleteDelegate = FOnEndSessionCompleteDelegate::CreateUObject(this, &ULeetGameInstance::OnEndSessionComplete);
+	//OnCreateSessionCompleteDelegate = FOnCreateSessionCompleteDelegate::CreateUObject(this, &ULeetGameInstance::OnCreateSessionComplete);
 
 }
 
 ALeetGameSession* ULeetGameInstance::GetGameSession() const
 {
-	UE_LOG(LogTemp, Log, TEXT("[LEET] GAME INSTANCE UMyGameInstance::GetGameSession"));
+	UE_LOG(LogTemp, Log, TEXT("[LEET] GAME INSTANCE ULeetGameInstance::GetGameSession"));
 	UWorld* const World = GetWorld();
 	if (World)
 	{
@@ -136,6 +141,14 @@ bool ULeetGameInstance::GetServerInfo()
 	FString encryption = "off";  // Allowing unencrypted on sandbox for now.  
 
 	FString OutputString = "nonce=" + nonceString + "&encryption=" + encryption;
+
+	UE_LOG(LogTemp, Log, TEXT("ServerSessionHostAddress: %s"), *ServerSessionHostAddress);
+	UE_LOG(LogTemp, Log, TEXT("ServerSessionID: %s"), *ServerSessionID);
+
+	if (ServerSessionHostAddress.Len() > 1) {
+		OutputString = OutputString + "&session_host_address=" + ServerSessionHostAddress + "&session_id=" + ServerSessionID;
+	}
+
 	FString APIURI = "/api/v2/server/info";
 
 	bool requestSuccess = PerformHttpRequest(&ULeetGameInstance::GetServerInfoComplete, APIURI, OutputString);
@@ -183,10 +196,22 @@ void ULeetGameInstance::GetServerInfoComplete(FHttpRequestPtr HttpRequest, FHttp
 	UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [GetServerInfoComplete] Done!"));
 }
 
+/**
+* Delegate fired when a session create request has completed
+*
+* @param SessionName the name of the session this callback is for
+* @param bWasSuccessful true if the async action completed without error, false if there was an error
+*/
+void ULeetGameInstance::OnCreateSessionComplete(FName SessionName, bool bWasSuccessful)
+{
+	//UE_LOG(LogOnlineGame, Verbose, TEXT("OnCreateSessionComplete %s bSuccess: %d"), *SessionName.ToString(), bWasSuccessful);
+	UE_LOG(LogTemp, Log, TEXT("[LEET] ULeetGameInstance::OnCreateSessionComplete"));
+}
+
 /** Initiates the session searching */
 bool ULeetGameInstance::FindSessions(ULocalPlayer* PlayerOwner, bool bFindLAN)
 {
-	UE_LOG(LogTemp, Log, TEXT("[LEET] MY GAME INSTANCE UMyGameInstance::FindSessions"));
+	UE_LOG(LogTemp, Log, TEXT("[LEET] GAME INSTANCE ULeetGameInstance::FindSessions"));
 	bool bResult = false;
 
 	/*
@@ -247,7 +272,7 @@ void ULeetGameInstance::OnSearchSessionsComplete(bool bWasSuccessful)
 
 void ULeetGameInstance::BeginWelcomeScreenState()
 {
-	UE_LOG(LogTemp, Log, TEXT("[LEET] GAME INSTANCE UMyGameInstance::BeginWelcomeScreenState"));
+	UE_LOG(LogTemp, Log, TEXT("[LEET] GAME INSTANCE ULeetGameInstance::BeginWelcomeScreenState"));
 	//this must come before split screen player removal so that the OSS sets all players to not using online features.
 	SetIsOnline(false);
 
@@ -321,7 +346,7 @@ bool ULeetGameInstance::JoinSession(ULocalPlayer* LocalPlayer, int32 SessionInde
 {
 	// needs to tear anything down based on current state?
 
-	UE_LOG(LogTemp, Log, TEXT("[LEET] GAME INSTANCE UMyGameInstance::JoinSession 1"));
+	UE_LOG(LogTemp, Log, TEXT("[LEET] GAME INSTANCE ULeetGameInstance::JoinSession 1"));
 
 
 	ALeetGameSession* const GameSession = GetGameSession();
@@ -350,7 +375,7 @@ bool ULeetGameInstance::JoinSession(ULocalPlayer* LocalPlayer, int32 SessionInde
 
 bool ULeetGameInstance::JoinSession(ULocalPlayer* LocalPlayer, const FOnlineSessionSearchResult& SearchResult)
 {
-	UE_LOG(LogTemp, Log, TEXT("[LEET] GAME INSTANCE UMyGameInstance::JoinSession 2"));
+	UE_LOG(LogTemp, Log, TEXT("[LEET] GAME INSTANCE ULeetGameInstance::JoinSession 2"));
 	// needs to tear anything down based on current state?
 	ALeetGameSession* const GameSession = GetGameSession();
 	if (GameSession)
@@ -384,7 +409,7 @@ bool ULeetGameInstance::JoinSession(ULocalPlayer* LocalPlayer, const FOnlineSess
 */
 void ULeetGameInstance::OnJoinSessionComplete(EOnJoinSessionCompleteResult::Type Result)
 {
-	UE_LOG(LogTemp, Log, TEXT("[LEET] GAME INSTANCE UMyGameInstance::OnJoinSessionComplete"));
+	UE_LOG(LogTemp, Log, TEXT("[LEET] GAME INSTANCE ULeetGameInstance::OnJoinSessionComplete"));
 	// unhook the delegate
 	ALeetGameSession* const GameSession = GetGameSession();
 	if (GameSession)
@@ -561,7 +586,7 @@ void ULeetGameInstance::HandleSessionFailure(const FUniqueNetId& NetId, ESession
 
 void ULeetGameInstance::OnEndSessionComplete(FName SessionName, bool bWasSuccessful)
 {
-	UE_LOG(LogOnline, Log, TEXT("UMyGameInstance::OnEndSessionComplete: Session=%s bWasSuccessful=%s"), *SessionName.ToString(), bWasSuccessful ? TEXT("true") : TEXT("false"));
+	UE_LOG(LogOnline, Log, TEXT("ULeetGameInstance::OnEndSessionComplete: Session=%s bWasSuccessful=%s"), *SessionName.ToString(), bWasSuccessful ? TEXT("true") : TEXT("false"));
 
 	IOnlineSubsystem* OnlineSub = IOnlineSubsystem::Get();
 	if (OnlineSub)
@@ -624,4 +649,13 @@ void ULeetGameInstance::CleanupSessionOnReturnToMenu()
 	{
 		//GEngine->HandleDisconnect( GetWorld(), GetWorld()->GetNetDriver() );
 	}
+}
+
+bool ULeetGameInstance::RegisterNewSession(FString IncServerSessionHostAddress, FString IncServerSessionID)
+{
+	UE_LOG(LogTemp, Log, TEXT("[LEET] GAME INSTANCE ULeetGameInstance::RegisterNewSession"));
+	ServerSessionHostAddress = IncServerSessionHostAddress;
+	ServerSessionID = IncServerSessionID;
+	GetServerInfo();
+	return true;
 }

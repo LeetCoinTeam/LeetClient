@@ -60,6 +60,14 @@ protected:
 	TSharedPtr<class FShooterOnlineSessionSettings> HostSettings;
 	/** Current search settings */
 	TSharedPtr<class FLeetOnlineSearchSettings> SearchSettings;
+
+	/**
+	* Delegate fired when a session create request has completed
+	*
+	* @param SessionName the name of the session this callback is for
+	* @param bWasSuccessful true if the async action completed without error, false if there was an error
+	*/
+	virtual void OnCreateSessionComplete(FName SessionName, bool bWasSuccessful);
 	
 	/**
 	* Delegate fired when a session search query has completed
@@ -97,6 +105,16 @@ protected:
 	*/
 	DECLARE_EVENT_TwoParams(ALeetGameSession, FOnCreatePresenceSessionComplete, FName /*SessionName*/, bool /*bWasSuccessful*/);
 	FOnCreatePresenceSessionComplete CreatePresenceSessionCompleteEvent;
+
+	/*
+	* Event triggered when a presence session is created
+	*
+	* @param SessionName name of session that was created
+	* @param bWasSuccessful was the create successful
+	*/
+	//DECLARE_EVENT_TwoParams(ALeetGameSession, FOnCreateSessionComplete, FName /*SessionName*/, bool /*bWasSuccessful*/);
+	//FOnCreateSessionComplete CreateSessionCompleteEvent;
+
 
 	/*
 	* Event triggered when a session is joined
@@ -166,9 +184,12 @@ public:
 
 	/** @return the delegate fired when creating a presence session */
 	FOnCreatePresenceSessionComplete& OnCreatePresenceSessionComplete() { return CreatePresenceSessionCompleteEvent; }
+	/** @return the delegate fired when creating a session */
+	//FOnCreateSessionComplete& OnCreateSessionComplete() { return CreateSessionCompleteEvent; }
 	
 	//virtual void RegisterServer();
 
+	FDelegateHandle OnCreateSessionCompleteDelegateHandle;
 	FDelegateHandle OnFindSessionsCompleteDelegateHandle;
 	FDelegateHandle OnJoinSessionCompleteDelegateHandle;
 	FDelegateHandle OnDestroySessionCompleteDelegateHandle;

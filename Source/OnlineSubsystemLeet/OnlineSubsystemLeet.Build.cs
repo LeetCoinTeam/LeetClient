@@ -17,7 +17,8 @@ public class OnlineSubsystemLeet : ModuleRules
 				"Sockets",
 				"OnlineSubsystem",
 				"OnlineSubsystemUtils",
-				"Json"
+				"Json",
+                "LeetClientPlugin"
 			}
 			);
         PrivateIncludePaths.AddRange(

@@ -11,12 +11,17 @@ namespace
 ALeetGameSession::ALeetGameSession(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
-	UE_LOG(LogTemp, Log, TEXT("[LEET] GAME SESSION ::CONSTRUCTOR"));
-	OnDestroySessionCompleteDelegate = FOnDestroySessionCompleteDelegate::CreateUObject(this, &ALeetGameSession::OnDestroySessionComplete);
-	OnFindSessionsCompleteDelegate = FOnFindSessionsCompleteDelegate::CreateUObject(this, &ALeetGameSession::OnFindSessionsComplete);
-	OnJoinSessionCompleteDelegate = FOnJoinSessionCompleteDelegate::CreateUObject(this, &ALeetGameSession::OnJoinSessionComplete);
-	if (IsRunningDedicatedServer()) {
-		//RegisterServer();
+	UE_LOG(LogTemp, Log, TEXT("[LEET] ALeetGameSession::ALeetGameSession"));
+	if (!HasAnyFlags(RF_ClassDefaultObject))
+	{
+		UE_LOG(LogTemp, Log, TEXT("[LEET] ALeetGameSession::ALeetGameSession !HasAnyFlags"));
+		OnCreateSessionCompleteDelegate = FOnCreateSessionCompleteDelegate::CreateUObject(this, &ALeetGameSession::OnCreateSessionComplete);
+		OnDestroySessionCompleteDelegate = FOnDestroySessionCompleteDelegate::CreateUObject(this, &ALeetGameSession::OnDestroySessionComplete);
+		OnFindSessionsCompleteDelegate = FOnFindSessionsCompleteDelegate::CreateUObject(this, &ALeetGameSession::OnFindSessionsComplete);
+		OnJoinSessionCompleteDelegate = FOnJoinSessionCompleteDelegate::CreateUObject(this, &ALeetGameSession::OnJoinSessionComplete);
+		if (IsRunningDedicatedServer()) {
+			//RegisterServer();
+		}
 	}
 }
 
@@ -49,6 +54,42 @@ const TArray<FOnlineSessionSearchResult> & ALeetGameSession::GetSearchResults() 
 	UE_LOG(LogTemp, Log, TEXT("[LEET] GAME SESSION ::GetSearchResults"));
 	return SearchSettings->SearchResults;
 };
+
+/**
+* Delegate fired when a session create request has completed
+*
+* @param SessionName the name of the session this callback is for
+* @param bWasSuccessful true if the async action completed without error, false if there was an error
+*/
+void ALeetGameSession::OnCreateSessionComplete(FName SessionName, bool bWasSuccessful)
+{
+	//UE_LOG(LogOnlineGame, Verbose, TEXT("OnCreateSessionComplete %s bSuccess: %d"), *SessionName.ToString(), bWasSuccessful);
+	UE_LOG(LogTemp, Log, TEXT("[LEET] ALeetGameSession::OnCreateSessionComplete"));
+
+	IOnlineSubsystem* OnlineSub = IOnlineSubsystem::Get();
+	if (OnlineSub)
+	{
+		UE_LOG(LogTemp, Log, TEXT("[LEET] ALeetGameSession::OnCreateSessionComplete OnlineSub"));
+		IOnlineSessionPtr Sessions = OnlineSub->GetSessionInterface();
+		Sessions->ClearOnCreateSessionCompleteDelegate_Handle(OnCreateSessionCompleteDelegateHandle);
+		FNamedOnlineSession *sess = Sessions->GetNamedSession(SessionName);
+		//sess->SessionInfo->GetSessionId();
+		//sess->SessionInfo->ToString();
+		ULeetGameInstance *gameInstance = Cast<ULeetGameInstance>(this->GetGameInstance());
+		//if (GEngine->GetWorld() != nullptr && GEngine->GetWorld()->GetGameInstance() != nullptr)
+		//{
+			UE_LOG(LogTemp, Log, TEXT("[LEET] ALeetGameSession::OnCreateSessionComplete Got Instance"));
+			//ULeetGameInstance *gameInstance = Cast<ULeetGameInstance>(GEngine->GetWorld()->GetGameInstance());
+			UE_LOG(LogTemp, Log, TEXT("[LEET] ALeetGameSession::OnCreateSessionComplete 2"));
+			bool result = gameInstance->RegisterNewSession(sess->SessionInfo->ToString(), sess->SessionInfo->GetSessionId().ToString());
+			UE_LOG(LogTemp, Log, TEXT("[LEET] ALeetGameSession::OnCreateSessionComplete 3"));
+			gameInstance->GetServerInfo();
+		//}
+	}
+	//OnCreateSessionComplete().Broadcast(SessionName, bWasSuccessful);
+	OnCreatePresenceSessionComplete().Broadcast(SessionName, bWasSuccessful);
+}
+
 void ALeetGameSession::OnFindSessionsComplete(bool bWasSuccessful)
 {
 	//UE_LOG(LogOnlineGame, Verbose, TEXT("OnFindSessionsComplete bSuccess: %d"), bWasSuccessful);
@@ -191,7 +232,7 @@ bool ALeetGameSession::JoinSession(TSharedPtr<const FUniqueNetId> UserId, FName 
 }
 
 void ALeetGameSession::RegisterServer() {
-	UE_LOG(LogTemp, Log, TEXT("[LEET] GAME SESSION RegisterServer"));
+	UE_LOG(LogTemp, Log, TEXT("[LEET] ALeetGameSession::RegisterServer"));
 	UWorld* World = GetWorld();
 	IOnlineSessionPtr SessionInt = Online::GetSessionInterface();
 
@@ -204,6 +245,10 @@ void ALeetGameSession::RegisterServer() {
 	Settings.bAllowJoinViaPresence = true;
 	Settings.bIsDedicated = true;
 
+	OnCreateSessionCompleteDelegateHandle = SessionInt->AddOnCreateSessionCompleteDelegate_Handle(OnCreateSessionCompleteDelegate);
 	SessionInt->CreateSession(0, GameSessionName, Settings);
+	
+	//OnCreateSessionCompleteDelegateHandle = Sessions->AddOnCreateSessionCompleteDelegate_Handle(OnCreateSessionCompleteDelegate);
+
 	return;
 }

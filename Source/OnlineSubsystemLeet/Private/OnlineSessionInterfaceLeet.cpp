@@ -181,7 +181,7 @@ public:
 
 bool FOnlineSessionLeet::CreateSession(int32 HostingPlayerNum, FName SessionName, const FOnlineSessionSettings& NewSessionSettings)
 {
-	UE_LOG(LogTemp, Log, TEXT("[LEET] Online Session Create"));
+	UE_LOG(LogTemp, Log, TEXT("[LEET] FOnlineSessionLeet::CreateSession"));
 	uint32 Result = E_FAIL;
 
 	// Check for an existing session
@@ -221,6 +221,14 @@ bool FOnlineSessionLeet::CreateSession(int32 HostingPlayerNum, FName SessionName
 		Session->SessionInfo = MakeShareable(NewSessionInfo);
 
 		// Make Leet API call to register this server online.
+		/*
+		if (GEngine->GetWorld() != nullptr && GEngine->GetWorld()->GetGameInstance() != nullptr)
+		{
+			ULeetGameInstance *gameInstance = Cast<ULeetGameInstance>(GEngine->GetWorld()->GetGameInstance());
+
+			bool result = gameInstance->RegisterNewSession(Session->SessionInfo->ToString, Session->SessionInfo->GetSessionId);
+		}
+		*/
 
 		Result = UpdateLANStatus();
 
@@ -245,10 +253,14 @@ bool FOnlineSessionLeet::CreateSession(int32 HostingPlayerNum, FName SessionName
 		UE_LOG_ONLINE(Warning, TEXT("Cannot create session '%s': session already exists."), *SessionName.ToString());
 	}
 
+	/*
 	if (Result != ERROR_IO_PENDING)
 	{
+		UE_LOG(LogTemp, Log, TEXT("[LEET] Online Session Create: Result != ERROR_IO_PENDING"));
 		TriggerOnCreateSessionCompleteDelegates(SessionName, (Result == ERROR_SUCCESS) ? true : false);
 	}
+	*/
+	TriggerOnCreateSessionCompleteDelegates(SessionName, (Result == ERROR_SUCCESS) ? true : false);
 
 	return Result == ERROR_IO_PENDING || Result == ERROR_SUCCESS;
 }
