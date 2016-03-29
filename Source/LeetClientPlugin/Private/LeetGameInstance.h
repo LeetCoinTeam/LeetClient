@@ -45,6 +45,7 @@ class LEETCLIENTPLUGIN_API ULeetGameInstance : public UGameInstance
 	FString APIURL;
 	FString ServerAPIKey;
 	FString ServerAPISecret;
+	FString GameKey;
 	// Populated through the get server info API call
 	int32 incrementBTC;
 	int32 killRewardBTC; //convenience so we don't have to do the math every time.

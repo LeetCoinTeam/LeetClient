@@ -3,6 +3,9 @@
 #pragma once
 
 #include "Engine.h"
+//#include "Core.h"
+#include "Http.h"
+#include "Json.h"
 #include "OnlineSubsystemLeetModule.h"
 #include "OnlineSubsystemModule.h"
 #include "OnlineSubsystem.h"

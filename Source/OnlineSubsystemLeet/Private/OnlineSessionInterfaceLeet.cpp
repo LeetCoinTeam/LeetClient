@@ -44,6 +44,8 @@ void FOnlineSessionInfoLeet::Init(const FOnlineSubsystemLeet& Subsystem)
 	FGuid OwnerGuid;
 	FPlatformMisc::CreateGuid(OwnerGuid);
 	SessionId = FUniqueNetIdString(OwnerGuid.ToString());
+
+	
 }
 
 /**
@@ -221,6 +223,7 @@ bool FOnlineSessionLeet::CreateSession(int32 HostingPlayerNum, FName SessionName
 		Session->SessionInfo = MakeShareable(NewSessionInfo);
 
 		// Make Leet API call to register this server online.
+		// This does not work from here...  Doing it in LeetClient via a delegate instead.
 		/*
 		if (GEngine->GetWorld() != nullptr && GEngine->GetWorld()->GetGameInstance() != nullptr)
 		{
@@ -490,8 +493,9 @@ bool FOnlineSessionLeet::CancelMatchmaking(const FUniqueNetId& SearchingPlayerId
 
 bool FOnlineSessionLeet::FindSessions(int32 SearchingPlayerNum, const TSharedRef<FOnlineSessionSearch>& SearchSettings)
 {
-	UE_LOG(LogTemp, Log, TEXT("[LEET] Online Session Find"));
+	UE_LOG(LogTemp, Log, TEXT("[LEET] FOnlineSessionLeet::FindSessions"));
 	uint32 Return = E_FAIL;
+	uint32 OnlineReturn = E_FAIL;
 
 	// Don't start another search while one is in progress
 	if (!CurrentSessionSearch.IsValid() && SearchSettings->SearchState != EOnlineAsyncTaskState::InProgress)
@@ -504,6 +508,9 @@ bool FOnlineSessionLeet::FindSessions(int32 SearchingPlayerNum, const TSharedRef
 
 		// remember the time at which we started search, as this will be used for a "good enough" ping estimation
 		SessionSearchStartInSeconds = FPlatformTime::Seconds();
+
+		// Check if its a Online query
+		OnlineReturn = FindOnlineSession();
 
 		// Check if its a LAN query
 		Return = FindLANSession();
@@ -535,6 +542,36 @@ bool FOnlineSessionLeet::FindSessionById(const FUniqueNetId& SearchingUserId, co
 	FOnlineSessionSearchResult EmptyResult;
 	CompletionDelegates.ExecuteIfBound(0, false, EmptyResult);
 	return true;
+}
+
+uint32 FOnlineSessionLeet::FindOnlineSession()
+{
+	UE_LOG(LogTemp, Log, TEXT("[LEET] FOnlineSessionLeet::FindOnlineSession"));
+	uint32 Return = ERROR_IO_PENDING;
+
+	// looking at online subsystem facebook friends to get this
+	TSharedRef<class IHttpRequest> HttpRequest = FHttpModule::Get().CreateRequest();
+	FString GameKey = LeetSubsystem->GetGameKey();
+	FString APIURL = LeetSubsystem->GetAPIURL();
+	FString SessionQueryUrl = "http://" + APIURL + "/api/v2/game/" + GameKey + "/servers/";
+
+	HttpRequest->OnProcessRequestComplete().BindRaw(this, &FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete);
+
+	HttpRequest->SetURL(SessionQueryUrl);
+	HttpRequest->SetHeader("User-Agent", "LEET_UE4_API_CLIENT/1.0");
+	HttpRequest->SetHeader("Content-Type", "application/x-www-form-urlencoded");
+	HttpRequest->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+	HttpRequest->SetVerb(TEXT("GET"));
+	bool requestSuccess = HttpRequest->ProcessRequest();
+
+	//FPendingSessionQuery
+	return Return;
+}
+
+void FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded)
+{
+	UE_LOG(LogTemp, Log, TEXT("[LEET] FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete"));
+
 }
 
 uint32 FOnlineSessionLeet::FindLANSession()

@@ -60,6 +60,9 @@ public:
 	virtual FString GetAppId() const override;
 	virtual bool Exec(class UWorld* InWorld, const TCHAR* Cmd, FOutputDevice& Ar) override;
 
+	FString GetAPIURL();
+	FString GetGameKey();
+
 	// FTickerObjectBase
 
 	virtual bool Tick(float DeltaTime) override;
@@ -97,6 +100,10 @@ PACKAGE_SCOPE:
 	{}
 
 private:
+
+	// Populated through config file
+	FString APIURL;
+	FString GameKey;
 
 	/** Interface to the session services */
 	FOnlineSessionLeetPtr SessionInterface;

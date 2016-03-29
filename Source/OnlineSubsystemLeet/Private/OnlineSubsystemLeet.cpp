@@ -165,11 +165,9 @@ bool FOnlineSubsystemLeet::Init()
 			UE_LOG(LogTemp, Log, TEXT("[LEET] Online Subsystem Configs Exist"));
 			FString test = *Configs->Find(TEXT("APIURL"));
 
-			//LeetClient::getInstance()->initialize(
-			//	*Configs->Find(TEXT("ServerURL")),
-			//	*Configs->Find(TEXT("Secret")),
-			//	*Configs->Find(TEXT("AppID")),
-			//	*Configs->Find(TEXT("Version")));
+			APIURL = *Configs->Find(TEXT("APIURL"));
+			GameKey = *Configs->Find(TEXT("GameKey"));
+
 		}
 		else
 		{
@@ -266,4 +264,13 @@ bool FOnlineSubsystemLeet::Exec(UWorld* InWorld, const TCHAR* Cmd, FOutputDevice
 bool FOnlineSubsystemLeet::IsEnabled()
 {
 	return true;
+}
+
+FString FOnlineSubsystemLeet::GetAPIURL()
+{
+	return APIURL;
+}
+FString FOnlineSubsystemLeet::GetGameKey()
+{
+	return GameKey;
 }

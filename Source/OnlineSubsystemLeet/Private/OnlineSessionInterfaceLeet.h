@@ -29,6 +29,14 @@ private:
 	{}
 
 	/**
+	* Delegate called when a user /me request from facebook is complete
+	*/
+	void FindOnlineSession_HttpRequestComplete(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded);
+
+	// not sure if we need this yet...  looking at the facebook subsystem....
+	//IHttpRequest* FPendingSessionQuery;
+
+	/**
 	 * Ticks any lan beacon background tasks
 	 *
 	 * @param DeltaTime the time since the last tick
@@ -73,6 +81,14 @@ private:
 	 * @return ERROR_SUCCESS if successful, an error code otherwise
 	 */
 	uint32 FindLANSession();
+
+	/**
+	* Builds a Online search query and broadcasts it
+	*
+	* @return ERROR_SUCCESS if successful, an error code otherwise
+	*/
+	uint32 FindOnlineSession();
+
 
 	/**
 	 * Finishes searching over LAN and returns to hosting (if needed)
@@ -216,6 +232,7 @@ PACKAGE_SCOPE:
 public:
 
 	virtual ~FOnlineSessionLeet() {}
+	//FOnlineSessionLeet();
 
 	FNamedOnlineSession* GetNamedSession(FName SessionName) override
 	{

@@ -43,6 +43,7 @@ ULeetGameInstance::ULeetGameInstance(const FObjectInitializer& ObjectInitializer
 			APIURL = *Configs->Find(TEXT("APIURL"));
 			ServerAPISecret = *Configs->Find(TEXT("ServerSecret"));
 			ServerAPIKey = *Configs->Find(TEXT("ServerAPIKey"));
+			GameKey = *Configs->Find(TEXT("GameKey"));
 
 		}
 		else
