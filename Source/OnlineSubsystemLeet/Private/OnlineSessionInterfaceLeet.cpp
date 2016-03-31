@@ -572,6 +572,188 @@ void FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete(FHttpRequestPtr H
 {
 	UE_LOG(LogTemp, Log, TEXT("[LEET] FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete"));
 
+	bool bResult = false;
+	FString ResponseStr, ErrorStr;
+
+	if (bSucceeded &&
+		HttpResponse.IsValid())
+	{
+		ResponseStr = HttpResponse->GetContentAsString();
+		if (EHttpResponseCodes::IsOk(HttpResponse->GetResponseCode()))
+		{
+			UE_LOG(LogOnline, Verbose, TEXT("Query sessions request complete. url=%s code=%d response=%s"),
+				*HttpRequest->GetURL(), HttpResponse->GetResponseCode(), *ResponseStr);
+
+			// Create the Json parser
+			TSharedPtr<FJsonObject> JsonObject;
+			TSharedRef<TJsonReader<> > JsonReader = TJsonReaderFactory<>::Create(ResponseStr);
+
+			if (FJsonSerializer::Deserialize(JsonReader, JsonObject) &&
+				JsonObject.IsValid())
+			{
+				UE_LOG(LogTemp, Log, TEXT("[LEET] FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete JSON valid"));
+				// Update cached entry for local user
+				//FOnlineFriendsList& FriendsList = FriendsMap.FindOrAdd(PendingFriendsQuery.LocalUserNum);
+				//FriendsList.Friends.Empty();
+
+				// Should have an array of id mappings
+				TArray<TSharedPtr<FJsonValue> > JsonServers = JsonObject->GetArrayField(TEXT("servers"));
+				for (TArray<TSharedPtr<FJsonValue> >::TConstIterator ServerIt(JsonServers); ServerIt; ++ServerIt)
+				{
+					UE_LOG(LogTemp, Log, TEXT("[LEET] FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete SERVER >> "));
+					FString ServerKeyStr;
+					TMap<FString, FString> Attributes;
+					TSharedPtr<FJsonObject> JsonServerEntry = (*ServerIt)->AsObject();
+					for (TMap<FString, TSharedPtr<FJsonValue > >::TConstIterator It(JsonServerEntry->Values); It; ++It)
+					{
+						// parse server attributes
+						if (It->Value.IsValid() &&
+							It->Value->Type == EJson::String)
+						{
+							FString ValueStr = It->Value->AsString();
+							UE_LOG(LogTemp, Log, TEXT("ValueStr: %s"), *ValueStr);
+							if (It->Key == TEXT("key"))
+							{
+								ServerKeyStr = ValueStr;
+							}
+							Attributes.Add(It->Key, ValueStr);
+						}
+					}
+					// only add if valid id
+					if (!ServerKeyStr.IsEmpty())
+					{
+						UE_LOG(LogTemp, Log, TEXT("[LEET] FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete Adding a session for this server "));
+
+						// Create an object that we'll copy the data to
+						FOnlineSessionSettings NewServer;
+						if (CurrentSessionSearch.IsValid())
+						{
+							// Add space in the search results array
+							FOnlineSessionSearchResult* NewResult = new (CurrentSessionSearch->SearchResults) FOnlineSessionSearchResult();
+							// this is not a correct ping, but better than nothing
+							NewResult->PingInMs = static_cast<int32>((FPlatformTime::Seconds() - SessionSearchStartInSeconds) * 1000);
+
+							FOnlineSession* NewSession = &NewResult->Session;
+							UE_LOG(LogTemp, Log, TEXT("[LEET] FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete Session Created "));
+
+							//auto internetAddress = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->CreateInternetAddr();
+							UE_LOG(LogTemp, Log, TEXT("[LEET] FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete InternetAddress created "));
+							FString session_host_address = Attributes["session_host_address"];
+							UE_LOG(LogTemp, Log, TEXT("[LEET] FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete 1 "));
+							
+							UE_LOG(LogTemp, Log, TEXT("[LEET] FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete 2 "));
+							FString split_delimiter = ":";
+							FString IPAddress = TEXT("");
+							FString Port = TEXT("");
+							session_host_address.Split(split_delimiter, &IPAddress, &Port );
+							UE_LOG(LogTemp, Log, TEXT("IPAddress: %s"), *IPAddress);
+							UE_LOG(LogTemp, Log, TEXT("Port: %s"), *Port);
+							UE_LOG(LogTemp, Log, TEXT("[LEET] FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete 3 "));
+
+							FIPv4Address ip;
+							FIPv4Address::Parse(IPAddress, ip);
+
+							const TCHAR* TheIpTChar = *IPAddress;
+							bool isValid = true;
+
+							UE_LOG(LogTemp, Log, TEXT("[LEET] FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete 4 "));
+							//internetAddress->SetIp(ip.GetValue());
+							//UE_LOG(LogTemp, Log, TEXT("[LEET] FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete 5 "));
+							int32 PortInt = FCString::Atoi(*Port);
+							UE_LOG(LogTemp, Log, TEXT("[LEET] FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete 6 "));
+
+							TSharedRef<FInternetAddr> internetAddress = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->CreateInternetAddr();
+							internetAddress->SetIp(TheIpTChar, isValid);
+							internetAddress->SetPort(PortInt);
+							
+							UE_LOG(LogTemp, Log, TEXT("[LEET] FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete Parsed IpAddress "));
+							
+							// THis is not set on all servers yet, keeping it muted for now
+							//FString session_id = Attributes["session_id"];
+
+							// Experimenting
+							//TSharedPtr <FOnlineSessionInfoLeet> NewSessionInfoD = new FOnlineSessionInfoLeet();
+
+							
+							//MakeShareable(NewSessionInfoD);
+							//NewSessionInfoD->
+							//NewSessionInfoD->HostAddr = internetAddress;
+							//NewSession->SessionInfo = NewSessionInfoD;
+
+							// coped over from OnlineSessionInterfaceNull 677
+							FOnlineSessionInfoLeet* SessionInfo = (FOnlineSessionInfoLeet*)NewSession->SessionInfo.Get();
+							UE_LOG(LogTemp, Log, TEXT("[LEET] FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete Got SessionInfo "));
+
+							//uint32 HostIp = 0;
+							//SessionInfo->HostAddr->GetIp(HostIp); // will return in host order
+							//SessionInfo->HostAddr->SetIp(0x7f000001);	// 127.0.0.1
+							
+							//MakeShareable(&internetAddress);
+							// Crashes client
+							//bool setHostAddrSuccess = SessionInfo->SetHostAddr(internetAddress);
+
+							// Crashes Client
+							SessionInfo->HostAddr = internetAddress;
+							
+							UE_LOG(LogTemp, Log, TEXT("[LEET] FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete Set HostAddress "));
+							//SessionInfo->SessionId = SearchSessionInfo->SessionId;
+
+							//FOnlineSessionInfoLeet* NewSessionInfo;
+							//NewSessionInfo->HostAddr = internetAddress;
+							//NewSession->SessionInfo-> = NewSessionInfo;
+							//
+
+							//FUniqueNetIdString* NewNetIdString = new FUniqueNetIdString;
+							//NewNetIdString->
+							//NewNetIdString.UniqueNetIdStr = session_id;
+							//NewSessionInfo->SetSessionId(NewNetIdString);
+
+							//TSharedRef < FInternetAddr > internetAddress = new FInternetAddr();
+							//NewSession->SessionInfo.
+							//bool hostSuccess = NewSession->SessionInfo ->SetHostAddr(internetAddress);
+
+							NewSession->SessionSettings.bIsDedicated = true;
+							NewSession->SessionSettings.bIsLANMatch = false;
+
+							// This adds the address to a custom field, which we don't really want.
+							// Leaving it for now for debug purposes.
+							FName key = "session_host_address";
+							NewSession->SessionSettings.Set(key, Attributes["session_host_address"]);
+
+
+							key = "serverKey";
+							NewSession->SessionSettings.Set(key, Attributes["key"]);
+							key = "serverTitle";
+							NewSession->SessionSettings.Set(key, Attributes["title"]);
+							// TODO add all of the custom leet server settings we care about.
+
+							// NOTE: we don't notify until the timeout happens
+						}
+						else
+						{
+							UE_LOG_ONLINE(Warning, TEXT("Failed to create new online game settings object"));
+						}
+					}
+				}
+				bResult = true;
+			}
+		}
+		else
+		{
+			ErrorStr = FString::Printf(TEXT("Invalid response. code=%d error=%s"),
+				HttpResponse->GetResponseCode(), *ResponseStr);
+		}
+	}
+	else
+	{
+		ErrorStr = TEXT("No response");
+	}
+	if (!ErrorStr.IsEmpty())
+	{
+		UE_LOG(LogOnline, Warning, TEXT("Query friends list request failed. %s"), *ErrorStr);
+	}
+	// DO delegate
+
 }
 
 uint32 FOnlineSessionLeet::FindLANSession()

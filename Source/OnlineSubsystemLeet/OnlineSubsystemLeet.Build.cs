@@ -18,6 +18,7 @@ public class OnlineSubsystemLeet : ModuleRules
 				"OnlineSubsystem",
 				"OnlineSubsystemUtils",
 				"Json",
+                "Networking",
                 "LeetClientPlugin"
 			}
 			);

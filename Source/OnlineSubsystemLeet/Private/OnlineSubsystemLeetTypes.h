@@ -82,4 +82,14 @@ public:
 	{
 		return SessionId;
 	}
+
+	bool SetHostAddr(TSharedPtr<class FInternetAddr> HostAddress) {
+		HostAddr = HostAddress;
+		return true;
+	}
+
+	bool SetSessionId(FUniqueNetIdString SessionIdInc) {
+		SessionId = SessionIdInc;
+		return true;
+	}
 };

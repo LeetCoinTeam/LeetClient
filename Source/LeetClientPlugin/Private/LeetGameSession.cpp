@@ -73,8 +73,7 @@ void ALeetGameSession::OnCreateSessionComplete(FName SessionName, bool bWasSucce
 		IOnlineSessionPtr Sessions = OnlineSub->GetSessionInterface();
 		Sessions->ClearOnCreateSessionCompleteDelegate_Handle(OnCreateSessionCompleteDelegateHandle);
 		FNamedOnlineSession *sess = Sessions->GetNamedSession(SessionName);
-		//sess->SessionInfo->GetSessionId();
-		//sess->SessionInfo->ToString();
+		// TODO - move this off instance, and just fire off the http request from inside here.
 		ULeetGameInstance *gameInstance = Cast<ULeetGameInstance>(this->GetGameInstance());
 		//if (GEngine->GetWorld() != nullptr && GEngine->GetWorld()->GetGameInstance() != nullptr)
 		//{

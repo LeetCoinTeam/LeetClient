@@ -10,6 +10,7 @@
 #include "OnlineSubsystemModule.h"
 #include "OnlineSubsystem.h"
 //#include "LeetGameInstance.h"
+#include "Networking.h"
 #include "ModuleManager.h"
 
 #define INVALID_INDEX -1
