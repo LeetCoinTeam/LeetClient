@@ -45,13 +45,13 @@ void FOnlineSubsystemLeetModule::StartupModule()
 
 	// Create and register our singleton factory with the main online subsystem for easy access
 	FOnlineSubsystemModule& OSS = FModuleManager::GetModuleChecked<FOnlineSubsystemModule>("OnlineSubsystem");
-	OSS.RegisterPlatformService(NULL_SUBSYSTEM, LeetFactory);
+	OSS.RegisterPlatformService(LEET_SUBSYSTEM, LeetFactory);
 }
 
 void FOnlineSubsystemLeetModule::ShutdownModule()
 {
 	FOnlineSubsystemModule& OSS = FModuleManager::GetModuleChecked<FOnlineSubsystemModule>("OnlineSubsystem");
-	OSS.UnregisterPlatformService(NULL_SUBSYSTEM);
+	OSS.UnregisterPlatformService(LEET_SUBSYSTEM);
 
 	delete LeetFactory;
 	LeetFactory = NULL;

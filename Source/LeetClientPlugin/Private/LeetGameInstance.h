@@ -18,6 +18,10 @@ struct FLeetSessionSearchResult {
 		FString OwningUserName;
 
 	UPROPERTY(BlueprintReadWrite)
+		FString ServerTitle;
+	// TODO - add more leet data that we care about
+
+	UPROPERTY(BlueprintReadWrite)
 		int32 SearchIdx;
 };
 

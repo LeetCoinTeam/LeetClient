@@ -16,9 +16,9 @@
 #define INVALID_INDEX -1
 
 /** FName declaration of Leet subsystem */
-#define NULL_SUBSYSTEM FName(TEXT("Leet"))
+#define LEET_SUBSYSTEM FName(TEXT("Leet"))
 /** URL Prefix when using Leet socket connection */
-#define NULL_URL_PREFIX TEXT("Leet.")
+#define LEET_URL_PREFIX TEXT("Leet.")
 
 /** pre-pended to all NULL logging */
 #undef ONLINE_LOG_PREFIX

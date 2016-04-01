@@ -58,6 +58,7 @@ ULeetGameInstance::ULeetGameInstance(const FObjectInitializer& ObjectInitializer
 
 	// I don't think we want this here.
 	//GetServerInfo();
+	UE_LOG(LogTemp, Log, TEXT("[LEET] GAME INSTANCE CONSTRUCTOR - DONE"));
 }
 
 void ULeetGameInstance::Init()
@@ -182,11 +183,26 @@ void ULeetGameInstance::GetServerInfoComplete(FHttpRequestPtr HttpRequest, FHttp
 			{
 				UE_LOG(LogTemp, Log, TEXT("Authorization True"));
 				// Set up our instance variables
-				incrementBTC = JsonParsed->GetIntegerField("incrementBTC");
-				minimumBTCHold = JsonParsed->GetIntegerField("minimumBTCHold");
-				serverRakeBTCPercentage = JsonParsed->GetNumberField("serverRakeBTCPercentage");
-				leetRakePercentage = JsonParsed->GetNumberField("leetcoinRakePercentage");
-				killRewardBTC = incrementBTC - ((incrementBTC * serverRakeBTCPercentage) + (incrementBTC * leetRakePercentage));
+				if (JsonParsed->GetIntegerField("incrementBTC")) {
+					incrementBTC = JsonParsed->GetIntegerField("incrementBTC");
+				}
+				if (JsonParsed->GetIntegerField("minimumBTCHold")) {
+					minimumBTCHold = JsonParsed->GetIntegerField("minimumBTCHold");
+				}
+				if (JsonParsed->GetNumberField("serverRakeBTCPercentage")) {
+					serverRakeBTCPercentage = JsonParsed->GetNumberField("serverRakeBTCPercentage");
+				}
+				if (JsonParsed->GetNumberField("leetcoinRakePercentage")) {
+					leetRakePercentage = JsonParsed->GetNumberField("leetcoinRakePercentage");
+				}
+				if (incrementBTC && serverRakeBTCPercentage && leetRakePercentage) {
+					killRewardBTC = incrementBTC - ((incrementBTC * serverRakeBTCPercentage) + (incrementBTC * leetRakePercentage));
+				}
+				
+				
+				
+				
+				
 			}
 			else
 			{
@@ -264,6 +280,10 @@ void ULeetGameInstance::OnSearchSessionsComplete(bool bWasSuccessful)
 			FLeetSessionSearchResult searchresult;
 			searchresult.OwningUserName = Result.Session.OwningUserName;
 			searchresult.SearchIdx = IdxResult;
+			FName key = "serverTitle";
+			FString serverTitle;
+			bool settingsSuccess = Result.Session.SessionSettings.Get(key, serverTitle);
+			searchresult.ServerTitle = serverTitle;
 
 			LeetSessionSearchResults.Add(searchresult);
 		}

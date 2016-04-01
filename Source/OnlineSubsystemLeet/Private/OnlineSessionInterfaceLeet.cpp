@@ -439,9 +439,8 @@ bool FOnlineSessionLeet::EndSession(FName SessionName)
 	return Result == ERROR_SUCCESS || Result == ERROR_IO_PENDING;
 }
 
-bool FOnlineSessionLeet::DestroySession(FName SessionName)
+bool FOnlineSessionLeet::DestroySession(FName SessionName, const FOnDestroySessionCompleteDelegate& CompletionDelegate)
 {
-	UE_LOG(LogTemp, Log, TEXT("[LEET] Online Session Destroy"));
 	uint32 Result = E_FAIL;
 	// Find the session in question
 	FNamedOnlineSession* Session = GetNamedSession(SessionName);
@@ -459,6 +458,7 @@ bool FOnlineSessionLeet::DestroySession(FName SessionName)
 
 	if (Result != ERROR_IO_PENDING)
 	{
+		CompletionDelegate.ExecuteIfBound(SessionName, (Result == ERROR_SUCCESS) ? true : false);
 		TriggerOnDestroySessionCompleteDelegates(SessionName, (Result == ERROR_SUCCESS) ? true : false);
 	}
 
@@ -625,7 +625,10 @@ void FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete(FHttpRequestPtr H
 						UE_LOG(LogTemp, Log, TEXT("[LEET] FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete Adding a session for this server "));
 
 						// Create an object that we'll copy the data to
-						FOnlineSessionSettings NewServer;
+						//FOnlineSessionSettings NewServer;
+						// The wiki howto does it differently like this:
+						//TSharedPtr<class FOnlineSessionSettings> NewServer = MakeShareable(new FOnlineSessionSettings());
+
 						if (CurrentSessionSearch.IsValid())
 						{
 							// Add space in the search results array
@@ -671,15 +674,6 @@ void FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete(FHttpRequestPtr H
 							// THis is not set on all servers yet, keeping it muted for now
 							//FString session_id = Attributes["session_id"];
 
-							// Experimenting
-							//TSharedPtr <FOnlineSessionInfoLeet> NewSessionInfoD = new FOnlineSessionInfoLeet();
-
-							
-							//MakeShareable(NewSessionInfoD);
-							//NewSessionInfoD->
-							//NewSessionInfoD->HostAddr = internetAddress;
-							//NewSession->SessionInfo = NewSessionInfoD;
-
 							// coped over from OnlineSessionInterfaceNull 677
 							FOnlineSessionInfoLeet* SessionInfo = (FOnlineSessionInfoLeet*)NewSession->SessionInfo.Get();
 							UE_LOG(LogTemp, Log, TEXT("[LEET] FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete Got SessionInfo "));
@@ -693,7 +687,7 @@ void FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete(FHttpRequestPtr H
 							//bool setHostAddrSuccess = SessionInfo->SetHostAddr(internetAddress);
 
 							// Crashes Client
-							SessionInfo->HostAddr = internetAddress;
+							//SessionInfo->HostAddr = internetAddress;
 							
 							UE_LOG(LogTemp, Log, TEXT("[LEET] FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete Set HostAddress "));
 							//SessionInfo->SessionId = SearchSessionInfo->SessionId;

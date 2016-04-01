@@ -19,6 +19,7 @@ public:
 	virtual FString GetRealName() const override { return TEXT("DummyRealName"); }
 	virtual FString GetDisplayName() const override  { return TEXT("DummyDisplayName"); }
 	virtual bool GetUserAttribute(const FString& AttrName, FString& OutAttrValue) const override;
+	virtual bool SetUserAttribute(const FString& AttrName, const FString& AttrValue) override; //4.11
 
 	// FUserOnlineAccount
 
@@ -68,6 +69,7 @@ public:
 	virtual FString GetAuthToken(int32 LocalUserNum) const override;
 	virtual void GetUserPrivilege(const FUniqueNetId& UserId, EUserPrivileges::Type Privilege, const FOnGetUserPrivilegeCompleteDelegate& Delegate) override;
 	virtual FPlatformUserId GetPlatformUserIdFromUniqueNetId(const FUniqueNetId& UniqueNetId) override;
+	virtual FString GetAuthType() const override; // 4.11
 
 	// FOnlineIdentityLeet
 
