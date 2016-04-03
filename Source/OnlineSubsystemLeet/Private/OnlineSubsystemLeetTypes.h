@@ -88,8 +88,8 @@ public:
 		return true;
 	}
 
-	bool SetSessionId(FUniqueNetIdString SessionIdInc) {
-		SessionId = SessionIdInc;
+	bool SetSessionId(FUniqueNetIdString* SessionIdInc) {
+		SessionId = *SessionIdInc;
 		return true;
 	}
 };

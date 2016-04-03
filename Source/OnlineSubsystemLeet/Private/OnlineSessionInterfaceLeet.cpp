@@ -839,10 +839,51 @@ bool FOnlineSessionLeet::JoinSession(int32 PlayerNum, FName SessionName, const F
 		UE_LOG(LogTemp, Log, TEXT("[LEET] Online Session Join 2"));
 		// Create Internet or LAN match
 		FOnlineSessionInfoLeet* NewSessionInfo = new FOnlineSessionInfoLeet();
+		//Session->SessionInfo = MakeShareable(NewSessionInfo);  //moved this down
+
+		// Trying to setup our hostaddr here....  Since I cant get it working on session search
+		FName key = "session_host_address";
+		FString session_host_address = "";
+		FString split_delimiter = ":";
+		FString IPAddress = TEXT("");
+		FString Port = TEXT("");
+
+		Session->SessionSettings.Get(key, session_host_address);
+		session_host_address.Split(split_delimiter, &IPAddress, &Port);
+
+		
+
+		UE_LOG(LogTemp, Log, TEXT("IPAddress: %s"), *IPAddress);
+		UE_LOG(LogTemp, Log, TEXT("Port: %s"), *Port);
+		FIPv4Address ip;
+		FIPv4Address::Parse(IPAddress, ip);
+		const TCHAR* TheIpTChar = *IPAddress;
+		bool isValid = true;
+		int32 PortInt = FCString::Atoi(*Port);
+		NewSessionInfo->HostAddr = ISocketSubsystem::Get()->CreateInternetAddr(ip.Value, PortInt);
+
+		key = "session_id";
+		FString session_id = "";
+		Session->SessionSettings.Get(key, session_id);
+		const FString session_id_const = session_id;
+		FUniqueNetIdString *session_id_str = new FUniqueNetIdString(session_id_const);
+
+		NewSessionInfo->SetSessionId(session_id_str);
+
+		// This is resulting in an non-valid SessionInfo
+		// I think we need this unique string, but I cant set it.
+
 		Session->SessionInfo = MakeShareable(NewSessionInfo);
+		const TSharedPtr<FOnlineSessionInfo> const_session_info = Session->SessionInfo;
+
+		//////////////
+
 
 		UE_LOG(LogTemp, Log, TEXT("[LEET] Online Session Join 3"));
-		Return = JoinLANSession(PlayerNum, Session, &DesiredSession.Session);
+		// I'm not sure if we should do this, but it's working so I'm leaving it like this.
+		// it used to be:
+		//Return = JoinLANSession(PlayerNum, Session, &DesiredSession.Session);
+		Return = JoinLANSession(PlayerNum, Session, Session);
 
 		UE_LOG(LogTemp, Log, TEXT("[LEET] Online Session Join 4"));
 		// turn off advertising on Join, to avoid clients advertising it over LAN
@@ -930,38 +971,32 @@ uint32 FOnlineSessionLeet::JoinLANSession(int32 PlayerNum, FNamedOnlineSession* 
 	uint32 Result = E_FAIL;
 	Session->SessionState = EOnlineSessionState::Pending;
 
+	// Debug logging
+	if (Session->SessionInfo.IsValid()) {
+		UE_LOG(LogTemp, Log, TEXT("[LEET] Online Session Join LAN : Session->SessionInfo.IsValid()"));
+	}
+	if (SearchSession != nullptr) {
+		UE_LOG(LogTemp, Log, TEXT("[LEET] Online Session Join LAN : SearchSession != nullptr"));
+	}
+	if (SearchSession->SessionInfo.IsValid()) {
+		UE_LOG(LogTemp, Log, TEXT("[LEET] Online Session Join LAN : SearchSession->SessionInfo.IsValid()"));
+	}
+
+	// Was testing to see what would happen, and "Fatal Error"
+	//if (Session->SessionInfo.IsValid() && SearchSession != nullptr)
 	if (Session->SessionInfo.IsValid() && SearchSession != nullptr && SearchSession->SessionInfo.IsValid())
 	{
+		UE_LOG(LogTemp, Log, TEXT("[LEET] Online Session Join LAN VALID"));
 		// Copy the session info over
 		const FOnlineSessionInfoLeet* SearchSessionInfo = (const FOnlineSessionInfoLeet*)SearchSession->SessionInfo.Get();
 		FOnlineSessionInfoLeet* SessionInfo = (FOnlineSessionInfoLeet*)Session->SessionInfo.Get();
 		SessionInfo->SessionId = SearchSessionInfo->SessionId;
 
-		// In our case HostAddr was not working so we're using the custom variable
-		FName key = "session_host_address";
-		FString session_host_address = "";
-		FString split_delimiter = ":";
-		FString IPAddress = TEXT("");
-		FString Port = TEXT("");
-		
-		SearchSession->SessionSettings.Get(key, session_host_address);
-		session_host_address.Split(split_delimiter, &IPAddress, &Port);
-
-		UE_LOG(LogTemp, Log, TEXT("IPAddress: %s"), *IPAddress);
-		UE_LOG(LogTemp, Log, TEXT("Port: %s"), *Port);
-		FIPv4Address ip;
-		FIPv4Address::Parse(IPAddress, ip);
-		const TCHAR* TheIpTChar = *IPAddress;
-		bool isValid = true;
-		int32 PortInt = FCString::Atoi(*Port);
-		SessionInfo->HostAddr = ISocketSubsystem::Get()->CreateInternetAddr(ip.Value, PortInt);
-		Result = ERROR_SUCCESS;
-
 		// from NULL:
-		//uint32 IpAddr;
-		//SearchSessionInfo->HostAddr->GetIp(IpAddr);
-		//SessionInfo->HostAddr = ISocketSubsystem::Get()->CreateInternetAddr(IpAddr, SearchSessionInfo->HostAddr->GetPort());
-		//Result = ERROR_SUCCESS;
+		uint32 IpAddr;
+		SearchSessionInfo->HostAddr->GetIp(IpAddr);
+		SessionInfo->HostAddr = ISocketSubsystem::Get()->CreateInternetAddr(IpAddr, SearchSessionInfo->HostAddr->GetPort());
+		Result = ERROR_SUCCESS;
 	}
 
 	return Result;
