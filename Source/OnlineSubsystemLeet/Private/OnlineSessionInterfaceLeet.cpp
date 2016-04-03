@@ -592,9 +592,10 @@ void FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete(FHttpRequestPtr H
 				JsonObject.IsValid())
 			{
 				UE_LOG(LogTemp, Log, TEXT("[LEET] FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete JSON valid"));
-				// Update cached entry for local user
-				//FOnlineFriendsList& FriendsList = FriendsMap.FindOrAdd(PendingFriendsQuery.LocalUserNum);
-				//FriendsList.Friends.Empty();
+
+				// Empty out the search results
+				FOnlineSessionSearch* SessionSearch = CurrentSessionSearch.Get();
+				SessionSearch->SearchResults.Empty();
 
 				// Should have an array of id mappings
 				TArray<TSharedPtr<FJsonValue> > JsonServers = JsonObject->GetArrayField(TEXT("servers"));
@@ -631,52 +632,68 @@ void FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete(FHttpRequestPtr H
 
 						if (CurrentSessionSearch.IsValid())
 						{
+
+							// Set up the data we need out of json
+							FString session_host_address = Attributes["session_host_address"];
+							FString split_delimiter = ":";
+							FString IPAddress = TEXT("");
+							FString Port = TEXT("");
+							session_host_address.Split(split_delimiter, &IPAddress, &Port);
+							UE_LOG(LogTemp, Log, TEXT("IPAddress: %s"), *IPAddress);
+							UE_LOG(LogTemp, Log, TEXT("Port: %s"), *Port);
+							FIPv4Address ip;
+							FIPv4Address::Parse(IPAddress, ip);
+							const TCHAR* TheIpTChar = *IPAddress;
+							bool isValid = true;
+							int32 PortInt = FCString::Atoi(*Port);
+
+
+							// We currently have the json for a single server
+							// We want to stick it in a sesssion
+							// which ends up as a SearchResult (FOnlineSessionSearchResult)
+							// which gets stored in an array inside SearchSettings
+
+							// problem:  Unable to set the HostAddr.
+							// How does NULL subsystem do it?
+
+							// I've made a mess in here and still can't get it to work.
+
+
+
+							// OLD STUFF 
+
+							TSharedPtr<class FOnlineSessionSettings> NewSessionSettings = MakeShareable(new FOnlineSessionSettings());
+
 							// Add space in the search results array
 							FOnlineSessionSearchResult* NewResult = new (CurrentSessionSearch->SearchResults) FOnlineSessionSearchResult();
 							// this is not a correct ping, but better than nothing
-							NewResult->PingInMs = static_cast<int32>((FPlatformTime::Seconds() - SessionSearchStartInSeconds) * 1000);
+							//NewResult->PingInMs = static_cast<int32>((FPlatformTime::Seconds() - SessionSearchStartInSeconds) * 1000);
+
+							// I think this might be backwards...
+							// look at HostSession here:  https://wiki.unrealengine.com/How_To_Use_Sessions_In_C%2B%2B
+							// They construct the settings first, then pass it to construct the session. maybe the info goes in that way as well?
 
 							FOnlineSession* NewSession = &NewResult->Session;
 							UE_LOG(LogTemp, Log, TEXT("[LEET] FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete Session Created "));
 
-							//auto internetAddress = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->CreateInternetAddr();
-							UE_LOG(LogTemp, Log, TEXT("[LEET] FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete InternetAddress created "));
-							FString session_host_address = Attributes["session_host_address"];
-							UE_LOG(LogTemp, Log, TEXT("[LEET] FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete 1 "));
 							
-							UE_LOG(LogTemp, Log, TEXT("[LEET] FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete 2 "));
-							FString split_delimiter = ":";
-							FString IPAddress = TEXT("");
-							FString Port = TEXT("");
-							session_host_address.Split(split_delimiter, &IPAddress, &Port );
-							UE_LOG(LogTemp, Log, TEXT("IPAddress: %s"), *IPAddress);
-							UE_LOG(LogTemp, Log, TEXT("Port: %s"), *Port);
-							UE_LOG(LogTemp, Log, TEXT("[LEET] FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete 3 "));
-
-							FIPv4Address ip;
-							FIPv4Address::Parse(IPAddress, ip);
-
-							const TCHAR* TheIpTChar = *IPAddress;
-							bool isValid = true;
 
 							UE_LOG(LogTemp, Log, TEXT("[LEET] FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete 4 "));
 							//internetAddress->SetIp(ip.GetValue());
 							//UE_LOG(LogTemp, Log, TEXT("[LEET] FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete 5 "));
-							int32 PortInt = FCString::Atoi(*Port);
+							
 							UE_LOG(LogTemp, Log, TEXT("[LEET] FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete 6 "));
 
-							TSharedRef<FInternetAddr> internetAddress = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->CreateInternetAddr();
-							internetAddress->SetIp(TheIpTChar, isValid);
-							internetAddress->SetPort(PortInt);
-							
+
 							UE_LOG(LogTemp, Log, TEXT("[LEET] FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete Parsed IpAddress "));
 							
 							// THis is not set on all servers yet, keeping it muted for now
 							//FString session_id = Attributes["session_id"];
 
 							// coped over from OnlineSessionInterfaceNull 677
-							FOnlineSessionInfoLeet* SessionInfo = (FOnlineSessionInfoLeet*)NewSession->SessionInfo.Get();
+							//FOnlineSessionInfoLeet* SessionInfo = (FOnlineSessionInfoLeet*)NewSession->SessionInfo.Get();
 							UE_LOG(LogTemp, Log, TEXT("[LEET] FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete Got SessionInfo "));
+
 
 							//uint32 HostIp = 0;
 							//SessionInfo->HostAddr->GetIp(HostIp); // will return in host order
@@ -688,6 +705,9 @@ void FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete(FHttpRequestPtr H
 
 							// Crashes Client
 							//SessionInfo->HostAddr = internetAddress;
+
+							//Crashes Client
+							//SessionInfo->HostAddr = ISocketSubsystem::Get()->CreateInternetAddr(ip.Value, PortInt);
 							
 							UE_LOG(LogTemp, Log, TEXT("[LEET] FOnlineSessionLeet::FindOnlineSession_HttpRequestComplete Set HostAddress "));
 							//SessionInfo->SessionId = SearchSessionInfo->SessionId;
@@ -811,16 +831,20 @@ bool FOnlineSessionLeet::JoinSession(int32 PlayerNum, FName SessionName, const F
 	// Don't join a session if already in one or hosting one
 	if (Session == NULL)
 	{
+		UE_LOG(LogTemp, Log, TEXT("[LEET] Online Session Join 1"));
 		// Create a named session from the search result data
 		Session = AddNamedSession(SessionName, DesiredSession.Session);
 		Session->HostingPlayerNum = PlayerNum;
 
+		UE_LOG(LogTemp, Log, TEXT("[LEET] Online Session Join 2"));
 		// Create Internet or LAN match
 		FOnlineSessionInfoLeet* NewSessionInfo = new FOnlineSessionInfoLeet();
 		Session->SessionInfo = MakeShareable(NewSessionInfo);
 
+		UE_LOG(LogTemp, Log, TEXT("[LEET] Online Session Join 3"));
 		Return = JoinLANSession(PlayerNum, Session, &DesiredSession.Session);
 
+		UE_LOG(LogTemp, Log, TEXT("[LEET] Online Session Join 4"));
 		// turn off advertising on Join, to avoid clients advertising it over LAN
 		Session->SessionSettings.bShouldAdvertise = false;
 
@@ -913,10 +937,31 @@ uint32 FOnlineSessionLeet::JoinLANSession(int32 PlayerNum, FNamedOnlineSession* 
 		FOnlineSessionInfoLeet* SessionInfo = (FOnlineSessionInfoLeet*)Session->SessionInfo.Get();
 		SessionInfo->SessionId = SearchSessionInfo->SessionId;
 
-		uint32 IpAddr;
-		SearchSessionInfo->HostAddr->GetIp(IpAddr);
-		SessionInfo->HostAddr = ISocketSubsystem::Get()->CreateInternetAddr(IpAddr, SearchSessionInfo->HostAddr->GetPort());
+		// In our case HostAddr was not working so we're using the custom variable
+		FName key = "session_host_address";
+		FString session_host_address = "";
+		FString split_delimiter = ":";
+		FString IPAddress = TEXT("");
+		FString Port = TEXT("");
+		
+		SearchSession->SessionSettings.Get(key, session_host_address);
+		session_host_address.Split(split_delimiter, &IPAddress, &Port);
+
+		UE_LOG(LogTemp, Log, TEXT("IPAddress: %s"), *IPAddress);
+		UE_LOG(LogTemp, Log, TEXT("Port: %s"), *Port);
+		FIPv4Address ip;
+		FIPv4Address::Parse(IPAddress, ip);
+		const TCHAR* TheIpTChar = *IPAddress;
+		bool isValid = true;
+		int32 PortInt = FCString::Atoi(*Port);
+		SessionInfo->HostAddr = ISocketSubsystem::Get()->CreateInternetAddr(ip.Value, PortInt);
 		Result = ERROR_SUCCESS;
+
+		// from NULL:
+		//uint32 IpAddr;
+		//SearchSessionInfo->HostAddr->GetIp(IpAddr);
+		//SessionInfo->HostAddr = ISocketSubsystem::Get()->CreateInternetAddr(IpAddr, SearchSessionInfo->HostAddr->GetPort());
+		//Result = ERROR_SUCCESS;
 	}
 
 	return Result;

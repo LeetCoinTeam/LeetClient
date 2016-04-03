@@ -59,6 +59,9 @@ protected:
 	/** Current host settings */
 	TSharedPtr<class FShooterOnlineSessionSettings> HostSettings;
 	/** Current search settings */
+	// Note:  Search Results are also stored inside SearchSettings - which is a little strange.
+	// SearchSettings->SearchResults;
+	// SearchResults are FOnlineSessionSearchResult
 	TSharedPtr<class FLeetOnlineSearchSettings> SearchSettings;
 
 	/**

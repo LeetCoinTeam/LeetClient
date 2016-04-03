@@ -438,6 +438,7 @@ void ULeetGameInstance::OnJoinSessionComplete(EOnJoinSessionCompleteResult::Type
 		GameSession->OnJoinSessionComplete().Remove(OnJoinSessionCompleteDelegateHandle);
 	}
 	FinishJoinSession(Result);
+
 }
 
 void ULeetGameInstance::FinishJoinSession(EOnJoinSessionCompleteResult::Type Result)
