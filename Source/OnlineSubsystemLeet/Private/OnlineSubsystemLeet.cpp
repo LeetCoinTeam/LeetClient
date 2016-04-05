@@ -143,6 +143,11 @@ bool FOnlineSubsystemLeet::Tick(float DeltaTime)
 		VoiceInterface->Tick(DeltaTime);
 	}
 
+	if (IdentityInterface.IsValid())
+	{
+		IdentityInterface->Tick(DeltaTime);
+	}
+
 	return true;
 }
 
@@ -192,7 +197,7 @@ bool FOnlineSubsystemLeet::Init()
 
 		SessionInterface = MakeShareable(new FOnlineSessionLeet(this));
 		LeaderboardsInterface = MakeShareable(new FOnlineLeaderboardsLeet(this));
-		IdentityInterface = MakeShareable(new FOnlineIdentityLeet(this));
+		IdentityInterface = MakeShareable(new FOnlineIdentityLeet());
 		AchievementsInterface = MakeShareable(new FOnlineAchievementsLeet(this));
 		VoiceInterface = MakeShareable(new FOnlineVoiceImpl(this));
 		if (!VoiceInterface->Init())

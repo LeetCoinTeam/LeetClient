@@ -61,54 +61,135 @@ inline FString GenerateRandomUserId(int32 LocalUserNum)
 	return FString::Printf( TEXT( "%s-%s" ), *HostName, *FGuid::NewGuid().ToString() );
 }
 
+/**
+* Used to do any time based processing of tasks
+*
+* @param DeltaTime the amount of time that has elapsed since the last tick
+*/
+void FOnlineIdentityLeet::Tick(float DeltaTime)
+{
+	// Only tick once per frame
+	TickLogin(DeltaTime);
+}
+
+/**
+* Ticks the registration process handling timeouts, etc.
+*
+* @param DeltaTime the amount of time that has elapsed since last tick
+*/
+void FOnlineIdentityLeet::TickLogin(float DeltaTime)
+{
+	
+	if (bHasLoginOutstanding)
+	{
+		//UE_LOG_ONLINE(Display, TEXT("FOnlineIdentityLeet::TickLogin bHasLoginOutstanding"));
+		LastCheckElapsedTime += DeltaTime;
+		TotalCheckElapsedTime += DeltaTime;
+		// See if enough time has elapsed in order to check for completion
+		if (LastCheckElapsedTime > 1.f ||
+			// Do one last check if we're getting ready to time out
+			TotalCheckElapsedTime > MaxCheckElapsedTime)
+		{
+			LastCheckElapsedTime = 0.f;
+			FString Title;
+			
+			// Find the browser window we spawned which should now be titled with the redirect url
+			if (FPlatformMisc::GetWindowTitleMatchingText(*LoginRedirectUrl, Title))
+			{
+				UE_LOG_ONLINE(Display, TEXT("FOnlineIdentityLeet::TickLogin GetWindowTitleMatchingText"));
+				bHasLoginOutstanding = false;
+
+				// Parse access token from the login redirect url
+				FString AccessToken;
+				if (FParse::Value(*Title, TEXT("access_token="), AccessToken) &&
+					!AccessToken.IsEmpty())
+				{
+					UE_LOG_ONLINE(Display, TEXT("FOnlineIdentityLeet::TickLogin Found access_token"));
+					// strip off any url parameters and just keep the token itself
+					FString AccessTokenOnly;
+					if (AccessToken.Split(TEXT("&"), &AccessTokenOnly, NULL))
+					{
+						AccessToken = AccessTokenOnly;
+					}
+					// kick off http request to get user info with the new token
+					TSharedRef<class IHttpRequest> HttpRequest = FHttpModule::Get().CreateRequest();
+					LoginUserRequests.Add(&HttpRequest.Get(), FPendingLoginUser(LocalUserNumPendingLogin, AccessToken));
+
+					FString MeUrl = TEXT("https://leetsandbox.appspot.com/me?access_token=`token");
+
+					HttpRequest->OnProcessRequestComplete().BindRaw(this, &FOnlineIdentityLeet::MeUser_HttpRequestComplete);
+					HttpRequest->SetURL(MeUrl.Replace(TEXT("`token"), *AccessToken, ESearchCase::IgnoreCase));
+					HttpRequest->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+					HttpRequest->SetVerb(TEXT("GET"));
+					HttpRequest->ProcessRequest();
+				}
+				else
+				{
+					TriggerOnLoginCompleteDelegates(LocalUserNumPendingLogin, false, FUniqueNetIdString(TEXT("")),
+						FString(TEXT("RegisterUser() failed to parse the user registration results")));
+				}
+			}
+			// Trigger the delegate if we hit the timeout limit
+			else if (TotalCheckElapsedTime > MaxCheckElapsedTime)
+			{
+				bHasLoginOutstanding = false;
+				TriggerOnLoginCompleteDelegates(LocalUserNumPendingLogin, false, FUniqueNetIdString(TEXT("")),
+					FString(TEXT("RegisterUser() timed out without getting the data")));
+			}
+		}
+		// Reset our time trackers if we are done ticking for now
+		if (!bHasLoginOutstanding)
+		{
+			LastCheckElapsedTime = 0.f;
+			TotalCheckElapsedTime = 0.f;
+		}
+	}
+}
+
 bool FOnlineIdentityLeet::Login(int32 LocalUserNum, const FOnlineAccountCredentials& AccountCredentials)
 {
+	UE_LOG_ONLINE(Display, TEXT("FOnlineIdentityLeet::Login"));
 	FString ErrorStr;
-	TSharedPtr<FUserOnlineAccountLeet> UserAccountPtr;
 
-	// valid local player index
-	if (LocalUserNum < 0 || LocalUserNum >= MAX_LOCAL_PLAYERS)
+	if (bHasLoginOutstanding)
 	{
-		ErrorStr = FString::Printf(TEXT("Invalid LocalUserNum=%d"), LocalUserNum);
+		ErrorStr = FString::Printf(TEXT("Registration already pending for user %d"),
+			LocalUserNumPendingLogin);
 	}
-	else if (AccountCredentials.Id.IsEmpty())
+	else if (!(LoginUrl.Len() && LoginRedirectUrl.Len() && ClientId.Len()))
 	{
-		ErrorStr = TEXT("Invalid account id, string empty");
+		ErrorStr = FString::Printf(TEXT("OnlineSubsystemLeet is improperly configured in DefaultEngine.ini LeetEndpoint=%s RedirectUrl=%s ClientId=%s"),
+			*LoginUrl, *LoginRedirectUrl, *ClientId);
 	}
 	else
 	{
-		TSharedPtr<const FUniqueNetId>* UserId = UserIds.Find(LocalUserNum);
-		if (UserId == NULL)
+		// random number to represent client generated state for verification on login
+		State = FString::FromInt(FMath::Rand() % 100000);
+		// auth url to spawn in browser
+		const FString& Command = FString::Printf(TEXT("%s?redirect_uri=%s&client_id=%s&state=%s&response_type=token"),
+			*LoginUrl, *LoginRedirectUrl, *ClientId, *State);
+		UE_LOG_ONLINE(Display, TEXT("FOnlineIdentityLeet::Login - %s"), *LoginUrl);
+		// This should open the browser with the command as the URL
+		if (FPlatformMisc::OsExecute(TEXT("open"), *Command))
 		{
-			FString RandomUserId = GenerateRandomUserId(LocalUserNum);
-
-			FUniqueNetIdString NewUserId(RandomUserId);
-			UserAccountPtr = MakeShareable(new FUserOnlineAccountLeet(RandomUserId));
-			UserAccountPtr->UserAttributes.Add(TEXT("id"), RandomUserId);
-
-			// update/add cached entry for user
-			UserAccounts.Add(NewUserId, UserAccountPtr.ToSharedRef());
-
-			// keep track of user ids for local users
-			UserIds.Add(LocalUserNum, UserAccountPtr->GetUserId());
+			// keep track of local user requesting registration
+			LocalUserNumPendingLogin = LocalUserNum;
+			bHasLoginOutstanding = true;
 		}
 		else
 		{
-			const FUniqueNetIdString* UniqueIdStr = (FUniqueNetIdString*)(UserId->Get());
-			TSharedRef<FUserOnlineAccountLeet>* TempPtr = UserAccounts.Find(*UniqueIdStr);
-			check(TempPtr);
-			UserAccountPtr = *TempPtr;
+			ErrorStr = FString::Printf(TEXT("Failed to execute command %s"),
+				*Command);
 		}
 	}
 
 	if (!ErrorStr.IsEmpty())
 	{
-		UE_LOG_ONLINE(Warning, TEXT("Login request failed. %s"), *ErrorStr);
-		TriggerOnLoginCompleteDelegates(LocalUserNum, false, FUniqueNetIdString(), ErrorStr);
+		UE_LOG(LogOnline, Error, TEXT("RegisterUser() failed: %s"),
+			*ErrorStr);
+		TriggerOnLoginCompleteDelegates(LocalUserNum, false, FUniqueNetIdString(TEXT("")), ErrorStr);
 		return false;
 	}
-
-	TriggerOnLoginCompleteDelegates(LocalUserNum, true, *UserAccountPtr->GetUserId(), ErrorStr);
 	return true;
 }
 
@@ -118,7 +199,7 @@ bool FOnlineIdentityLeet::Logout(int32 LocalUserNum)
 	if (UserId.IsValid())
 	{
 		// remove cached user account
-		UserAccounts.Remove(FUniqueNetIdString(*UserId));
+		UserAccounts.Remove(UserId->ToString());
 		// remove cached user id
 		UserIds.Remove(LocalUserNum);
 		// not async but should call completion delegate anyway
@@ -128,7 +209,7 @@ bool FOnlineIdentityLeet::Logout(int32 LocalUserNum)
 	}
 	else
 	{
-		UE_LOG_ONLINE(Warning, TEXT("No logged in user found for LocalUserNum=%d."),
+		UE_LOG(LogOnline, Warning, TEXT("No logged in user found for LocalUserNum=%d."),
 			LocalUserNum);
 		TriggerOnLogoutCompleteDelegates(LocalUserNum, false);
 	}
@@ -137,35 +218,25 @@ bool FOnlineIdentityLeet::Logout(int32 LocalUserNum)
 
 bool FOnlineIdentityLeet::AutoLogin(int32 LocalUserNum)
 {
-	FString LoginStr;
-	FString PasswordStr;
-	FString TypeStr;
+	return false;
+}
 
-	FParse::Value(FCommandLine::Get(), TEXT("AUTH_LOGIN="), LoginStr);
-	FParse::Value(FCommandLine::Get(), TEXT("AUTH_PASSWORD="), PasswordStr);
-	FParse::Value(FCommandLine::Get(), TEXT("AUTH_TYPE="), TypeStr);
-
-	if (!LoginStr.IsEmpty())
+/**
+* Parses the results into a user account entry
+*
+* @param Results the string returned by the login process
+*/
+bool FOnlineIdentityLeet::ParseLoginResults(const FString& Results, FUserOnlineAccountLeet& Account)
+{
+	UE_LOG_ONLINE(Display, TEXT("FOnlineIdentityLeet::ParseLoginResults 111"));
+	UE_LOG_ONLINE(Display, TEXT("Results: %s"), *Results);
+	// reset it
+	Account = FUserOnlineAccountLeet();
+	// get the access token
+	if (FParse::Value(*Results, TEXT("access_token="), Account.AuthTicket))
 	{
-		if (!PasswordStr.IsEmpty())
-		{
-			if (!TypeStr.IsEmpty())
-			{
-				return Login(0, FOnlineAccountCredentials(TypeStr, LoginStr, PasswordStr));
-			}
-			else
-			{
-				UE_LOG_ONLINE(Warning, TEXT("AutoLogin missing AUTH_TYPE=<type>."));
-			}
-		}
-		else
-		{
-			UE_LOG_ONLINE(Warning, TEXT("AutoLogin missing AUTH_PASSWORD=<password>."));
-		}
-	}
-	else
-	{
-		UE_LOG_ONLINE(Warning, TEXT("AutoLogin missing AUTH_LOGIN=<login id>."));
+		UE_LOG_ONLINE(Display, TEXT("FOnlineIdentityLeet::ParseLoginResults got access_token"));
+		return !Account.AuthTicket.IsEmpty();
 	}
 	return false;
 }
@@ -174,8 +245,7 @@ TSharedPtr<FUserOnlineAccount> FOnlineIdentityLeet::GetUserAccount(const FUnique
 {
 	TSharedPtr<FUserOnlineAccount> Result;
 
-	FUniqueNetIdString StringUserId(UserId);
-	const TSharedRef<FUserOnlineAccountLeet>* FoundUserAccount = UserAccounts.Find(StringUserId);
+	const TSharedRef<FUserOnlineAccountLeet>* FoundUserAccount = UserAccounts.Find(UserId.ToString());
 	if (FoundUserAccount != NULL)
 	{
 		Result = *FoundUserAccount;
@@ -188,7 +258,7 @@ TArray<TSharedPtr<FUserOnlineAccount> > FOnlineIdentityLeet::GetAllUserAccounts(
 {
 	TArray<TSharedPtr<FUserOnlineAccount> > Result;
 
-	for (TMap<FUniqueNetIdString, TSharedRef<FUserOnlineAccountLeet>>::TConstIterator It(UserAccounts); It; ++It)
+	for (FUserOnlineAccountLeetMap::TConstIterator It(UserAccounts); It; ++It)
 	{
 		Result.Add(It.Value());
 	}
@@ -272,15 +342,51 @@ FString FOnlineIdentityLeet::GetAuthToken(int32 LocalUserNum) const
 	return FString();
 }
 
-FOnlineIdentityLeet::FOnlineIdentityLeet(class FOnlineSubsystemLeet* InSubsystem)
+
+/**
+* Sets the needed configuration properties
+*/
+FOnlineIdentityLeet::FOnlineIdentityLeet()
+	: LastCheckElapsedTime(0.f)
+	, TotalCheckElapsedTime(0.f)
+	, MaxCheckElapsedTime(0.f)
+	, bHasLoginOutstanding(false)
+	, LocalUserNumPendingLogin(0)
 {
-	// autologin the 0-th player
-	Login(0, FOnlineAccountCredentials(TEXT("DummyType"), TEXT("DummyUser"), TEXT("DummyId")) );
+	UE_LOG_ONLINE(Display, TEXT("FOnlineIdentityLeet::FOnlineIdentityLeet"));
+	if (!GConfig->GetString(TEXT("OnlineSubsystemLeet.OnlineIdentityLeet"), TEXT("LoginUrl"), LoginUrl, GEngineIni))
+	{
+		UE_LOG(LogOnline, Warning, TEXT("Missing LoginUrl= in [OnlineSubsystemLeet.OnlineIdentityLeet] of DefaultEngine.ini"));
+	}
+	if (!GConfig->GetString(TEXT("OnlineSubsystemLeet.OnlineIdentityLeet"), TEXT("LoginRedirectUrl"), LoginRedirectUrl, GEngineIni))
+	{
+		UE_LOG(LogOnline, Warning, TEXT("Missing LoginRedirectUrl= in [OnlineSubsystemLeet.OnlineIdentityLeet] of DefaultEngine.ini"));
+	}
+	if (!GConfig->GetString(TEXT("OnlineSubsystemLeet.OnlineIdentityLeet"), TEXT("ClientId"), ClientId, GEngineIni))
+	{
+		UE_LOG(LogOnline, Warning, TEXT("Missing ClientId= in [OnlineSubsystemLeet.OnlineIdentityLeet] of DefaultEngine.ini"));
+	}
+	if (!GConfig->GetFloat(TEXT("OnlineSubsystemLeet.OnlineIdentityLeet"), TEXT("LoginTimeout"), MaxCheckElapsedTime, GEngineIni))
+	{
+		UE_LOG(LogOnline, Warning, TEXT("Missing LoginTimeout= in [OnlineSubsystemLeet.OnlineIdentityLeet] of DefaultEngine.ini"));
+		// Default to 30 seconds
+		MaxCheckElapsedTime = 30.f;
+	}
 }
 
+/*
+FOnlineIdentityLeet::FOnlineIdentityLeet(class FOnlineSubsystemLeet* InSubsystem)
+{
+// autologin the 0-th player
+Login(0, FOnlineAccountCredentials(TEXT("DummyType"), TEXT("DummyUser"), TEXT("DummyId")) );
+}
+*/
+
+/*
 FOnlineIdentityLeet::FOnlineIdentityLeet()
 {
 }
+*/
 
 FOnlineIdentityLeet::~FOnlineIdentityLeet()
 {
@@ -308,4 +414,70 @@ FPlatformUserId FOnlineIdentityLeet::GetPlatformUserIdFromUniqueNetId(const FUni
 FString FOnlineIdentityLeet::GetAuthType() const
 {
 	return TEXT("");
+}
+
+void FOnlineIdentityLeet::MeUser_HttpRequestComplete(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded)
+{
+	UE_LOG_ONLINE(Display, TEXT("FOnlineIdentityLeet::MeUser_HttpRequestComplete"));
+	bool bResult = false;
+	FString ResponseStr, ErrorStr;
+	FUserOnlineAccountLeet User;
+
+	FPendingLoginUser PendingRegisterUser = LoginUserRequests.FindRef(HttpRequest.Get());
+	// Remove the request from list of pending entries
+	LoginUserRequests.Remove(HttpRequest.Get());
+
+	if (bSucceeded &&
+		HttpResponse.IsValid())
+	{
+		ResponseStr = HttpResponse->GetContentAsString();
+		if (EHttpResponseCodes::IsOk(HttpResponse->GetResponseCode()))
+		{
+			UE_LOG(LogOnline, Verbose, TEXT("RegisterUser request complete. url=%s code=%d response=%s"),
+				*HttpRequest->GetURL(), HttpResponse->GetResponseCode(), *ResponseStr);
+
+			if (User.FromJson(ResponseStr))
+			{
+				if (!User.UserId.IsEmpty())
+				{
+					// copy and construct the unique id
+					TSharedRef<FUserOnlineAccountLeet> UserRef(new FUserOnlineAccountLeet(User));
+					UserRef->UserIdPtr = MakeShareable(new FUniqueNetIdString(User.UserId));
+					// update/add cached entry for user
+					UserAccounts.Add(User.UserId, UserRef);
+					// update the access token
+					UserRef->AuthTicket = PendingRegisterUser.AccessToken;
+					// keep track of user ids for local users
+					UserIds.Add(PendingRegisterUser.LocalUserNum, UserRef->GetUserId());
+
+					bResult = true;
+				}
+				else
+				{
+					ErrorStr = FString::Printf(TEXT("Missing user id. payload=%s"),
+						*ResponseStr);
+				}
+			}
+			else
+			{
+				ErrorStr = FString::Printf(TEXT("Invalid response payload=%s"),
+					*ResponseStr);
+			}
+		}
+		else
+		{
+			ErrorStr = FString::Printf(TEXT("Invalid response. code=%d error=%s"),
+				HttpResponse->GetResponseCode(), *ResponseStr);
+		}
+	}
+	else
+	{
+		ErrorStr = TEXT("No response");
+	}
+	if (!ErrorStr.IsEmpty())
+	{
+		UE_LOG(LogOnline, Warning, TEXT("RegisterUser request failed. %s"), *ErrorStr);
+	}
+
+	TriggerOnLoginCompleteDelegates(PendingRegisterUser.LocalUserNum, bResult, FUniqueNetIdString(User.UserId), ErrorStr);
 }

@@ -104,6 +104,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LEET")
 	void SetIsOnline(bool bInIsOnline);
 
+	/** Sets the online mode of the game */
+	UFUNCTION(BlueprintCallable, Category = "LEET")
+	void BeginLogin(FString InType, FString InId, FString InToken);
+
 	/** Shuts down the session, and frees any net driver */
 	void CleanupSessionOnReturnToMenu();
 
@@ -130,6 +134,12 @@ public:
 	bool TravelToSession(int32 ControllerId, FName SessionName);
 
 	bool RegisterNewSession(FString IncServerSessionHostAddress, FString IncServerSessionID);
+
+	/** Returns true if the passed in local player is signed in and online */
+	bool IsLocalPlayerOnline(ULocalPlayer* LocalPlayer);
+
+	/** Returns true if owning player is online. Displays proper messaging if the user can't play */
+	bool ValidatePlayerForOnlinePlay(ULocalPlayer* LocalPlayer);
 
 private:
 	UPROPERTY(config)
@@ -192,6 +202,13 @@ private:
 
 	/** Called when there is an error trying to travel to a local session */
 	void TravelLocalSessionFailure(UWorld *World, ETravelFailure::Type FailureType, const FString& ErrorString);
+
+	/** Show messaging and punt to welcome screen */
+	void HandleSignInChangeMessaging();
+
+	// OSS delegates to handle
+	void HandleUserLoginChanged(int32 GameUserIndex, ELoginStatus::Type PreviousLoginStatus, ELoginStatus::Type LoginStatus, const FUniqueNetId& UserId);
+
 
 protected:
 	/** Delegate for creating a new session */

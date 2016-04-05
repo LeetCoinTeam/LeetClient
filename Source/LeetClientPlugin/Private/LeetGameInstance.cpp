@@ -79,6 +79,12 @@ void ULeetGameInstance::Init()
 	const auto SessionInterface = OnlineSub->GetSessionInterface();
 	check(SessionInterface.IsValid());
 
+	// bind any OSS delegates we needs to handle
+	for (int i = 0; i < MAX_LOCAL_PLAYERS; ++i)
+	{
+		IdentityInterface->AddOnLoginStatusChangedDelegate_Handle(i, FOnLoginStatusChangedDelegate::CreateUObject(this, &ULeetGameInstance::HandleUserLoginChanged));
+	}
+
 	SessionInterface->AddOnSessionFailureDelegate_Handle(FOnSessionFailureDelegate::CreateUObject(this, &ULeetGameInstance::HandleSessionFailure));
 
 	OnEndSessionCompleteDelegate = FOnEndSessionCompleteDelegate::CreateUObject(this, &ULeetGameInstance::OnEndSessionComplete);
@@ -680,4 +686,102 @@ bool ULeetGameInstance::RegisterNewSession(FString IncServerSessionHostAddress, 
 	ServerSessionID = IncServerSessionID;
 	GetServerInfo();
 	return true;
+}
+
+bool ULeetGameInstance::IsLocalPlayerOnline(ULocalPlayer* LocalPlayer)
+{
+	if (LocalPlayer == NULL)
+	{
+		return false;
+	}
+	const auto OnlineSub = IOnlineSubsystem::Get();
+	if (OnlineSub)
+	{
+		const auto IdentityInterface = OnlineSub->GetIdentityInterface();
+		if (IdentityInterface.IsValid())
+		{
+			auto UniqueId = LocalPlayer->GetCachedUniqueNetId();
+			if (UniqueId.IsValid())
+			{
+				const auto LoginStatus = IdentityInterface->GetLoginStatus(*UniqueId);
+				if (LoginStatus == ELoginStatus::LoggedIn)
+				{
+					return true;
+				}
+			}
+		}
+	}
+
+	return false;
+}
+
+bool ULeetGameInstance::ValidatePlayerForOnlinePlay(ULocalPlayer* LocalPlayer)
+{
+	// This is all UI stuff.
+	// Removing it for now
+
+	return true;
+}
+
+void ULeetGameInstance::HandleUserLoginChanged(int32 GameUserIndex, ELoginStatus::Type PreviousLoginStatus, ELoginStatus::Type LoginStatus, const FUniqueNetId& UserId)
+{
+	/*
+	const bool bDowngraded = (LoginStatus == ELoginStatus::NotLoggedIn && !GetIsOnline()) || (LoginStatus != ELoginStatus::LoggedIn && GetIsOnline());
+
+	UE_LOG(LogOnline, Log, TEXT("HandleUserLoginChanged: bDownGraded: %i"), (int)bDowngraded);
+
+	TSharedPtr<GenericApplication> GenericApplication = FSlateApplication::Get().GetPlatformApplication();
+	bIsLicensed = GenericApplication->ApplicationLicenseValid();
+
+	// Find the local player associated with this unique net id
+	ULocalPlayer * LocalPlayer = FindLocalPlayerFromUniqueNetId(UserId);
+
+	// If this user is signed out, but was previously signed in, punt to welcome (or remove splitscreen if that makes sense)
+	if (LocalPlayer != NULL)
+	{
+		if (bDowngraded)
+		{
+			UE_LOG(LogOnline, Log, TEXT("HandleUserLoginChanged: Player logged out: %s"), *UserId.ToString());
+
+			//LabelPlayerAsQuitter(LocalPlayer);
+
+			// Check to see if this was the master, or if this was a split-screen player on the client
+			if (LocalPlayer == GetFirstGamePlayer() || GetIsOnline())
+			{
+				HandleSignInChangeMessaging();
+			}
+			else
+			{
+				// Remove local split-screen players from the list
+				RemoveExistingLocalPlayer(LocalPlayer);
+			}
+		}
+	}
+	*/
+}
+
+void ULeetGameInstance::HandleSignInChangeMessaging()
+{
+	// Master user signed out, go to initial state (if we aren't there already)
+	if (CurrentState != GetInitialState())
+	{	
+		GotoInitialState();
+	}
+}
+
+void ULeetGameInstance::BeginLogin(FString InType, FString InId, FString InToken)
+{
+	UE_LOG(LogTemp, Log, TEXT("[LEET] GAME INSTANCE ULeetGameInstance::BeginLogin"));
+
+	const auto OnlineSub = IOnlineSubsystem::Get();
+	if (OnlineSub)
+	{
+		const auto IdentityInterface = OnlineSub->GetIdentityInterface();
+		if (IdentityInterface.IsValid())
+		{
+			FOnlineAccountCredentials* Credentials = new FOnlineAccountCredentials(InType, InId, InToken);
+			IdentityInterface->Login(0, *Credentials);
+		}
+	}
+
 }
