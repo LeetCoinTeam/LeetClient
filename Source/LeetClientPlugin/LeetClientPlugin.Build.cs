@@ -48,6 +48,10 @@ namespace UnrealBuildTool.Rules
 					// ... add any modules that your module loads dynamically here ...
 				}
 				);
-		}
+            AddThirdPartyPrivateStaticDependencies(Target,
+                "CryptoPP"
+                );
+            PublicIncludePathModuleNames.Add("CryptoPP");
+        }
 	}
 }

@@ -1,12 +1,34 @@
+// This is a visual studio hack
+// https://answers.unrealengine.com/questions/229449/stdtype-info-fails-to-build-in-development-configu.html
+#ifdef WIN32
+
+#pragma warning( push ) 
+#pragma warning( disable: 4530 )
+namespace std { typedef type_info type_info; }
+#include "CryptoPP/5.6.2/include/sha3.h"
+#include "CryptoPP/5.6.2/include/hmac.h"
+
+#elif WIN64
+
+#pragma warning( push ) 
+#pragma warning( disable: 4530 )
+namespace std { typedef type_info type_info; }
+#include "CryptoPP/5.6.2/include/sha3.h"
+#include "CryptoPP/5.6.2/include/hmac.h"
+
+#endif
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
+
+
 
 #include "Engine/GameInstance.h"
 #include "Http.h"
 #include "Json.h"
 #include "Base64.h"
 #include <string>
+
 #include "LeetGameInstance.generated.h"
 
 
@@ -221,3 +243,9 @@ protected:
 	*/
 	virtual void OnCreateSessionComplete(FName SessionName, bool bWasSuccessful);
 };
+
+#ifdef WIN32
+
+#pragma warning( pop )
+
+#endif
