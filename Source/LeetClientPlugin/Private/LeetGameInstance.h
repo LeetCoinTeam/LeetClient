@@ -126,7 +126,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LEET")
 	void SetIsOnline(bool bInIsOnline);
 
-	/** Sets the online mode of the game */
+	/** Start the authentication flow */
 	UFUNCTION(BlueprintCallable, Category = "LEET")
 	void BeginLogin(FString InType, FString InId, FString InToken);
 
@@ -162,6 +162,19 @@ public:
 
 	/** Returns true if owning player is online. Displays proper messaging if the user can't play */
 	bool ValidatePlayerForOnlinePlay(ULocalPlayer* LocalPlayer);
+
+
+	// Activate a player against the leet api
+	UFUNCTION(BlueprintCallable, Category = "LEET")
+	bool ActivatePlayer(FString PlatformID, int32 playerID);
+	/**
+	* Delegate called when the request completes
+	*
+	* @param HttpRequest - object that started/processed the request
+	* @param HttpResponse - optional response object if request completed
+	* @param bSucceeded - true if Url connection was made and response was received
+	*/
+	void ActivateRequestComplete(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded);
 
 private:
 	UPROPERTY(config)

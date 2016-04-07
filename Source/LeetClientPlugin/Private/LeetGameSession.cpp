@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "LeetClientPluginPrivatePCH.h"
-#include "LeetGameSession.h"
+//#include "LeetGameSession.h"
 
 namespace
 {
@@ -250,4 +250,63 @@ void ALeetGameSession::RegisterServer() {
 	//OnCreateSessionCompleteDelegateHandle = Sessions->AddOnCreateSessionCompleteDelegate_Handle(OnCreateSessionCompleteDelegate);
 
 	return;
+}
+
+void ALeetGameSession::PostLogin(APlayerController* NewPlayer)
+{
+	UE_LOG(LogTemp, Log, TEXT("[LEET] ALeetGameSession::PostLogin"));
+}
+
+FString ALeetGameSession::ApproveLogin(const FString& Options)
+{
+	UE_LOG(LogTemp, Log, TEXT("[LEET] [ALeetGameSession] ApproveLogin Options: %s"), *Options);
+	UWorld* const World = GetWorld();
+	check(World);
+
+	AGameMode* const GameMode = World->GetAuthGameMode();
+	check(GameMode);
+
+	int32 SpectatorOnly = 0;
+	SpectatorOnly = UGameplayStatics::GetIntOption(Options, TEXT("SpectatorOnly"), SpectatorOnly);
+
+	if (AtCapacity(SpectatorOnly == 1))
+	{
+		return TEXT("Server full.");
+	}
+
+	int32 SplitscreenCount = 0;
+	SplitscreenCount = UGameplayStatics::GetIntOption(Options, TEXT("SplitscreenCount"), SplitscreenCount);
+
+	if (SplitscreenCount > MaxSplitscreensPerConnection)
+	{
+		//UE_LOG(LogGameSession, Warning, TEXT("ApproveLogin: A maximum of %i splitscreen players are allowed"), MaxSplitscreensPerConnection);
+		return TEXT("Maximum splitscreen players");
+	}
+
+	return TEXT("");
+}
+
+void ALeetGameSession::RegisterPlayer(APlayerController* NewPlayer, const TSharedPtr<const FUniqueNetId>& UniqueId, bool bWasFromInvite)
+{
+	UE_LOG(LogTemp, Log, TEXT("[LEET] ALeetGameSession::RegisterPlayer"));
+	if (NewPlayer != NULL)
+	{
+		// Set the player's ID.
+		check(NewPlayer->PlayerState);
+		NewPlayer->PlayerState->PlayerId = GetNextPlayerID();
+		NewPlayer->PlayerState->SetUniqueId(UniqueId);
+		NewPlayer->PlayerState->RegisterPlayerWithSession(bWasFromInvite);
+
+		int32 playerId = NewPlayer->PlayerState->PlayerId;
+		//FString playerUniqueId = UniqueId->ToString(); // assertion fail
+
+		UE_LOG(LogTemp, Log, TEXT("[LEET] [ALeetGameSession] RegisterPlayer playerId: %d"), playerId);
+		//UE_LOG(LogTemp, Log, TEXT("[LEET] [ALeetGameSession] RegisterPlayer playerUniqueId: %s"), *playerUniqueId);  // assertion fail
+
+		UE_LOG(LogTemp, Log, TEXT("[LEET] [ALeetGameSession] RegisterPlayer NewPlayer->PlayerState->PlayerName: %s"), *NewPlayer->PlayerState->PlayerName);
+		//NewPlayer->PlayerState->
+		
+
+
+	}
 }

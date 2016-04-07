@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "LeetClientPluginPrivatePCH.h"
-#include "LeetOnlineGameSettings.h"
+//#include "LeetOnlineGameSettings.h"
 
 FLeetOnlineSessionSettings::FLeetOnlineSessionSettings(bool bIsLAN, bool bIsPresence, int32 MaxNumPlayers)
 {

@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "LeetClientPluginPrivatePCH.h"
-#include "LeetGameInstance.h"
+//#include "LeetGameInstance.h"
 
 namespace LeetGameInstanceState
 {
@@ -205,10 +205,6 @@ void ULeetGameInstance::GetServerInfoComplete(FHttpRequestPtr HttpRequest, FHttp
 					killRewardBTC = incrementBTC - ((incrementBTC * serverRakeBTCPercentage) + (incrementBTC * leetRakePercentage));
 				}
 				
-				
-				
-				
-				
 			}
 			else
 			{
@@ -217,6 +213,30 @@ void ULeetGameInstance::GetServerInfoComplete(FHttpRequestPtr HttpRequest, FHttp
 		}
 	}
 	UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [GetServerInfoComplete] Done!"));
+}
+
+bool ULeetGameInstance::ActivatePlayer(FString PlatformID, int32 playerID)
+{
+
+	UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] ActivatePlayer"));
+	UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] DEBUG TEST"));
+	return true;
+}
+
+void ULeetGameInstance::ActivateRequestComplete(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded)
+{
+	if (!HttpResponse.IsValid())
+	{
+		UE_LOG(LogTemp, Log, TEXT("Test failed. NULL response"));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Log, TEXT("Completed test [%s] Url=[%s] Response=[%d] [%s]"),
+			*HttpRequest->GetVerb(),
+			*HttpRequest->GetURL(),
+			HttpResponse->GetResponseCode(),
+			*HttpResponse->GetContentAsString());
+	}
 }
 
 /**

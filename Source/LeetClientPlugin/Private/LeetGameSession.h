@@ -38,6 +38,28 @@ class LEETCLIENTPLUGIN_API ALeetGameSession : public AGameSession
 
 	ALeetGameSession(const FObjectInitializer& ObjectInitializer);
 
+	/**
+	* Called by GameMode::PostLogin to give session code chance to do work after PostLogin
+	*
+	* @param NewPlayer player logging in
+	*/
+	virtual void PostLogin(APlayerController* NewPlayer);
+
+	/**
+	* Called from GameMode.PreLogin() and Login().
+	* @param	Options	The URL options (e.g. name/spectator) the player has passed
+	* @return	Non-empty Error String if player not approved
+	*/
+	virtual FString ApproveLogin(const FString& Options);
+
+	/**
+	* Register a player with the online service session
+	* @param NewPlayer player to register
+	* @param UniqueId uniqueId they sent over on Login
+	* @param bWasFromInvite was this from an invite
+	*/
+	virtual void RegisterPlayer(APlayerController* NewPlayer, const TSharedPtr<const FUniqueNetId>& UniqueId, bool bWasFromInvite);
+
 protected:
 
 	
