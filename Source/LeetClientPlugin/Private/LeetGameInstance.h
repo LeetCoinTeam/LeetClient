@@ -47,6 +47,23 @@ struct FLeetSessionSearchResult {
 		int32 SearchIdx;
 };
 
+USTRUCT()
+struct FLeetActivePlayer {
+
+	GENERATED_USTRUCT_BODY()
+	int32 playerID;
+	FString platformID;
+	FString playerKey;
+	FString playerTitle;
+	//FString title; 
+	bool authorized;
+	int32 roundKills;
+	int32 roundDeaths;
+	TArray<FString> killed;
+	int32 Rank;
+	int32 BTCHold;
+};
+
 class ALeetGameSession;
 
 namespace LeetGameInstanceState
@@ -86,6 +103,8 @@ class LEETCLIENTPLUGIN_API ULeetGameInstance : public UGameInstance
 	//ULeetGameInstance(const FObjectInitializer& ObjectInitializer);
 
 	//ULeetGameInstance();
+
+	TArray<FLeetActivePlayer> ActivePlayers;
 
 	bool PerformHttpRequest(void(ULeetGameInstance::*delegateCallback)(FHttpRequestPtr, FHttpResponsePtr, bool), FString APIURI, FString ArgumentString);
 
@@ -175,6 +194,15 @@ public:
 	* @param bSucceeded - true if Url connection was made and response was received
 	*/
 	void ActivateRequestComplete(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded);
+
+	bool DeActivatePlayer(int32 playerID);
+	void DeActivateRequestComplete(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded);
+
+	bool OutgoingChat(int32 playerID, FText message);
+	void OutgoingChatComplete(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded);
+
+	// Get a player our of our custom array struct
+	FLeetActivePlayer* getPlayerByPlayerId(int32 playerID);
 
 private:
 	UPROPERTY(config)

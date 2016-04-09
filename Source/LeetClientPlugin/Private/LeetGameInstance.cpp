@@ -220,7 +220,67 @@ bool ULeetGameInstance::ActivatePlayer(FString PlatformID, int32 playerID)
 
 	UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] ActivatePlayer"));
 	UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] DEBUG TEST"));
-	return true;
+
+	// check to see if this player is in the active list already
+	bool platformIDFound = false;
+	int32 ActivePlayerIndex = 0;
+	UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] check to see if this player is in the active list already"));
+
+	// this is just a test to make sure the get by playerid is working.
+	//  TODO refactor the below to use this.
+	FLeetActivePlayer* CurrentActivePlayer = getPlayerByPlayerId(playerID);
+
+	UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] ActivePlayers.Num() > 0"));
+	for (int32 b = 0; b < ActivePlayers.Num(); b++)
+	{
+		UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [AuthorizePlayer] platformID: %s"), *ActivePlayers[b].platformID);
+		if (ActivePlayers[b].platformID == PlatformID) {
+			UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] AuthorizePlayer - FOUND MATCHING platformID"));
+			platformIDFound = true;
+			ActivePlayerIndex = b;
+		}
+	}
+
+	if (platformIDFound == false) {
+		UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] AuthorizePlayer - No existing platformID found"));
+
+		// add the player to the TArray as authorized=false
+		FLeetActivePlayer activeplayer;
+		activeplayer.playerID = playerID;
+		activeplayer.platformID = PlatformID;
+		activeplayer.authorized = false;
+		activeplayer.roundDeaths = 0;
+		activeplayer.roundKills = 0;
+
+		ActivePlayers.Add(activeplayer);
+
+		UE_LOG(LogTemp, Log, TEXT("PlatformID: %s"), *PlatformID);
+		UE_LOG(LogTemp, Log, TEXT("Object is: %s"), *GetName());
+
+
+		FString nonceString = "10951350917635";
+		FString encryption = "off";  // Allowing unencrypted on sandbox for now.  
+
+		FString OutputString = "nonce=" + nonceString + "&encryption=" + encryption;
+
+		UE_LOG(LogTemp, Log, TEXT("ServerSessionHostAddress: %s"), *ServerSessionHostAddress);
+		UE_LOG(LogTemp, Log, TEXT("ServerSessionID: %s"), *ServerSessionID);
+
+		if (ServerSessionHostAddress.Len() > 1) {
+			OutputString = OutputString + "&session_host_address=" + ServerSessionHostAddress + "&session_id=" + ServerSessionID;
+		}
+
+		FString APIURI = "/api/v2/player/" + PlatformID + "/activate";;
+
+		bool requestSuccess = PerformHttpRequest(&ULeetGameInstance::ActivateRequestComplete, APIURI, OutputString);
+
+		return requestSuccess;
+		}
+	else {
+		UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] AuthorizePlayer - TODO update record"));
+		return true;
+	}
+
 }
 
 void ULeetGameInstance::ActivateRequestComplete(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded)
@@ -236,8 +296,313 @@ void ULeetGameInstance::ActivateRequestComplete(FHttpRequestPtr HttpRequest, FHt
 			*HttpRequest->GetURL(),
 			HttpResponse->GetResponseCode(),
 			*HttpResponse->GetContentAsString());
+
+		APlayerController* pc = NULL;
+		int32 playerstateID;
+
+		FString JsonRaw = *HttpResponse->GetContentAsString();
+		TSharedPtr<FJsonObject> JsonParsed;
+		TSharedRef<TJsonReader<TCHAR>> JsonReader = TJsonReaderFactory<TCHAR>::Create(JsonRaw);
+		if (FJsonSerializer::Deserialize(JsonReader, JsonParsed))
+		{
+			bool Authorization = JsonParsed->GetBoolField("authorization");
+			UE_LOG(LogTemp, Log, TEXT("Authorization"));
+			if (Authorization)
+			{
+				UE_LOG(LogTemp, Log, TEXT("Authorization True"));
+				bool PlayerAuthorized = JsonParsed->GetBoolField("player_authorized");
+				if (PlayerAuthorized) {
+					UE_LOG(LogTemp, Log, TEXT("Player Authorized"));
+
+					int32 activeAuthorizedPlayers = 0;
+					int32 activePlayerIndex;
+
+					UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [ActivateRequestComplete] ActivePlayers.Num() > 0"));
+					for (int32 b = 0; b < ActivePlayers.Num(); b++)
+					{
+						UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [ActivateRequestComplete] platformID: %s"), *ActivePlayers[b].platformID);
+						if (ActivePlayers[b].platformID == JsonParsed->GetStringField("player_platformid")) {
+							UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [ActivateRequestComplete] - FOUND MATCHING platformID"));
+							activePlayerIndex = b;
+							ActivePlayers[b].authorized = true;
+							ActivePlayers[b].playerTitle = JsonParsed->GetStringField("player_name");
+							ActivePlayers[b].playerKey = JsonParsed->GetStringField("player_key");
+							ActivePlayers[b].BTCHold = JsonParsed->GetIntegerField("player_btchold");
+							ActivePlayers[b].Rank = JsonParsed->GetIntegerField("player_rank");
+
+						}
+						if (ActivePlayers[b].authorized) {
+							activeAuthorizedPlayers++;
+						}
+
+					}
+
+					// ALso set this player state playerName
+
+					for (FConstPlayerControllerIterator Iterator = GetWorld()->GetPlayerControllerIterator(); Iterator; ++Iterator)
+					{
+						UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [ActivateRequestComplete] - Looking for player to set name"));
+						pc = Iterator->Get();
+						/*
+						
+						AMyPlayerController* thisPlayerController = Cast<AMyPlayerController>(pc);
+						if (thisPlayerController) {
+							UE_LOG(LogTemp, Log, TEXT("[LEET] [UMyGameInstance] [ActivateRequestComplete] - Cast Controller success"));
+
+							if (matchStarted) {
+								UE_LOG(LogTemp, Log, TEXT("[LEET] [UMyGameInstance] [ActivateRequestComplete] - Match in progress - setting spectator"));
+								thisPlayerController->PlayerState->bIsSpectator = true;
+								thisPlayerController->ChangeState(NAME_Spectating);
+								thisPlayerController->ClientGotoState(NAME_Spectating);
+							}
+							playerstateID = thisPlayerController->PlayerState->PlayerId;
+							if (ActivePlayers[activePlayerIndex].playerID == playerstateID)
+							{
+								UE_LOG(LogTemp, Log, TEXT("[LEET] [UMyGameInstance] [ActivateRequestComplete] - playerID match - setting name"));
+								thisPlayerController->PlayerState->SetPlayerName(JsonParsed->GetStringField("player_name"));
+							}
+						}
+						*/
+					}
+
+					/*
+					if (activeAuthorizedPlayers >= MinimumPlayersNeededToStart)
+					{
+						matchStarted = true;
+						// travel to the third person map
+						FString UrlString = TEXT("/Game/ThirdPersonCPP/Maps/ThirdPersonExampleMap?listen");
+						GetWorld()->GetAuthGameMode()->bUseSeamlessTravel = true;
+						GetWorld()->ServerTravel(UrlString);
+					}
+					*/
+
+					
+
+				}
+				else
+				{
+					UE_LOG(LogTemp, Log, TEXT("Player NOT Authorized"));
+
+					// First grab the active player data from our struct
+					int32 activePlayerIndex;
+					bool platformIDFound = false;
+					FString jsonPlatformID = JsonParsed->GetStringField("player_platformid");
+
+					for (int32 b = 0; b < ActivePlayers.Num(); b++)
+					{
+						UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [ActivateRequestComplete] platformID: %s"), *ActivePlayers[b].platformID);
+						UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [ActivateRequestComplete] jsonPlatformID: %s"), *jsonPlatformID);
+						if (ActivePlayers[b].platformID == jsonPlatformID) {
+							UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [ActivateRequestComplete] - Found active player record"));
+							platformIDFound = true;
+							activePlayerIndex = b;
+						}
+					}
+
+
+
+
+					if (platformIDFound)
+					{
+						UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [ActivateRequestComplete] - PlatformID is found - moving to kick"));
+						for (FConstPlayerControllerIterator Iterator = GetWorld()->GetPlayerControllerIterator(); Iterator; ++Iterator)
+						{
+							UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [ActivateRequestComplete] - Looking for player to kick"));
+							pc = Iterator->Get();
+
+							playerstateID = pc->PlayerState->PlayerId;
+							if (ActivePlayers[activePlayerIndex].playerID == playerstateID)
+							{
+								UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [ActivateRequestComplete] - playerID match - kicking back to connect"));
+								//FString UrlString = TEXT("/Game/MyConnectLevel");
+								//ETravelType seamlesstravel = TRAVEL_Absolute;
+								//thisPlayerController->ClientTravel(UrlString, seamlesstravel);
+								// trying a session kick instead.
+								// Get the Online Subsystem to work with
+								IOnlineSubsystem* const OnlineSub = IOnlineSubsystem::Get();
+								const FString kickReason = TEXT("Not Authorized");
+								const FText kickReasonText = FText::FromString(kickReason);
+								//ALeetGameSession::KickPlayer(pc, kickReasonText);
+								this->GetGameSession()->KickPlayer(pc, kickReasonText);
+
+							}
+							
+						}
+					}
+				}
+			}
+		}
 	}
+	UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [ActivateRequestComplete] Done!"));
 }
+
+
+bool ULeetGameInstance::DeActivatePlayer(int32 playerID)
+{
+
+	UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] DeActivatePlayer"));
+	UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] DEBUG TEST"));
+
+	// check to see if this player is in the active list already
+	bool playerIDFound = false;
+	int32 ActivePlayerIndex = 0;
+	UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] check to see if this player is in the active list already"));
+
+	//UE_LOG(LogTemp, Log, TEXT("[LEET] [UMyGameInstance] [AuthorizePlayer] ActivePlayers: %i"), ActivePlayers);
+
+	UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] ActivePlayers.Num() > 0"));
+	for (int32 b = 0; b < ActivePlayers.Num(); b++)
+	{
+		//UE_LOG(LogTemp, Log, TEXT("[LEET] [UMyGameInstance] [DeAuthorizePlayer] playerID: %s"), ActivePlayers[b].playerID);
+		if (ActivePlayers[b].playerID == playerID) {
+			UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] DeActivatePlayer - FOUND MATCHING playerID"));
+			playerIDFound = true;
+			ActivePlayerIndex = b;
+		}
+
+	}
+
+
+	if (playerIDFound == true) {
+		UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] DeAuthorizePlayer - existing playerID found"));
+
+		// update the TArray as authorized=false
+		FLeetActivePlayer leavingplayer;
+		leavingplayer.playerID = playerID;
+		leavingplayer.authorized = false;
+		leavingplayer.platformID = ActivePlayers[ActivePlayerIndex].platformID;
+
+		FString PlatformID = ActivePlayers[ActivePlayerIndex].platformID;
+
+		ActivePlayers[ActivePlayerIndex] = leavingplayer;
+
+		UE_LOG(LogTemp, Log, TEXT("PlatformID: %s"), *PlatformID);
+		UE_LOG(LogTemp, Log, TEXT("Object is: %s"), *GetName());
+
+		FString nonceString = "10951350917635";
+		FString encryption = "off";  // Allowing unencrypted on sandbox for now.  
+
+
+		FString OutputString;
+		// TSharedRef<TJsonWriter<TCHAR>> JsonWriter = TJsonWriterFactory<>::Create(&OutputString);
+		// FJsonSerializer::Serialize(JsonObject.ToSharedRef(), JsonWriter);
+
+		// Build Params as text string
+		OutputString = "nonce=" + nonceString + "&encryption=" + encryption;
+		// urlencode the params
+
+		FString APIURI = "/api/v2/player/" + PlatformID + "/deactivate";;
+
+		bool requestSuccess = PerformHttpRequest(&ULeetGameInstance::ActivateRequestComplete, APIURI, OutputString);
+
+		return requestSuccess;
+
+	}
+	else {
+		UE_LOG(LogTemp, Log, TEXT("[LEET] [UMyGameInstance] DeAuthorizePlayer - Not found - Ignoring"));
+	}
+	return true;
+
+}
+
+void ULeetGameInstance::DeActivateRequestComplete(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded)
+{
+	if (!HttpResponse.IsValid())
+	{
+		UE_LOG(LogTemp, Log, TEXT("Test failed. NULL response"));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Log, TEXT("Completed test [%s] Url=[%s] Response=[%d] [%s]"),
+			*HttpRequest->GetVerb(),
+			*HttpRequest->GetURL(),
+			HttpResponse->GetResponseCode(),
+			*HttpResponse->GetContentAsString());
+
+		FString JsonRaw = *HttpResponse->GetContentAsString();
+		TSharedPtr<FJsonObject> JsonParsed;
+		TSharedRef<TJsonReader<TCHAR>> JsonReader = TJsonReaderFactory<TCHAR>::Create(JsonRaw);
+		if (FJsonSerializer::Deserialize(JsonReader, JsonParsed))
+		{
+			bool Authorization = JsonParsed->GetBoolField("authorization");
+			//  We don't care too much about the results from this call.  
+			UE_LOG(LogTemp, Log, TEXT("Authorization"));
+			if (Authorization)
+			{
+				UE_LOG(LogTemp, Log, TEXT("Authorization True"));
+			}
+			else
+			{
+				UE_LOG(LogTemp, Log, TEXT("Authorization False"));
+			}
+		}
+	}
+	UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [DeActivateRequestComplete] Done!"));
+}
+
+bool ULeetGameInstance::OutgoingChat(int32 playerID, FText message)
+{
+
+	UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] OutgoingChat"));
+	UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] DEBUG TEST"));
+
+	// check to see if this player is in the active list already
+	bool playerIDFound = false;
+	int32 ActivePlayerIndex = 0;
+	UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] check to see if this player is in the active list already"));
+
+	// Get our player record
+	FLeetActivePlayer* CurrentActivePlayer = getPlayerByPlayerId(playerID);
+
+	if (CurrentActivePlayer == nullptr) {
+		return false;
+	}
+
+		UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] OutgoingChat - existing playerID found"));
+
+		FString PlatformID = CurrentActivePlayer->platformID;
+
+		UE_LOG(LogTemp, Log, TEXT("PlatformID: %s"), *PlatformID);
+		UE_LOG(LogTemp, Log, TEXT("Object is: %s"), *GetName());
+		UE_LOG(LogTemp, Log, TEXT("message is: %s"), *message.ToString());
+
+		FString nonceString = "10951350917635";
+		FString encryption = "off";  // Allowing unencrypted on sandbox for now.  
+
+		FString OutputString;
+
+		// Build Params as text string
+		OutputString = "nonce=" + nonceString + "&encryption=" + encryption + "&message=" + message.ToString();
+		// urlencode the params
+
+		FString APIURI = "/api/v2/player/" + PlatformID + "/chat";
+
+		bool requestSuccess = PerformHttpRequest(&ULeetGameInstance::OutgoingChatComplete, APIURI, OutputString);
+
+		return requestSuccess;
+
+}
+
+void ULeetGameInstance::OutgoingChatComplete(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded)
+{
+	if (!HttpResponse.IsValid())
+	{
+		UE_LOG(LogTemp, Log, TEXT("Test failed. NULL response"));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Log, TEXT("Completed test [%s] Url=[%s] Response=[%d] [%s]"),
+			*HttpRequest->GetVerb(),
+			*HttpRequest->GetURL(),
+			HttpResponse->GetResponseCode(),
+			*HttpResponse->GetContentAsString());
+
+		FString JsonRaw = *HttpResponse->GetContentAsString();
+		//  We don't care too much about the results from this call.  
+	}
+	UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [OutgoingChatComplete] Done!"));
+}
+
 
 /**
 * Delegate fired when a session create request has completed
@@ -804,4 +1169,19 @@ void ULeetGameInstance::BeginLogin(FString InType, FString InId, FString InToken
 		}
 	}
 
+}
+
+FLeetActivePlayer* ULeetGameInstance::getPlayerByPlayerId(int32 playerID)
+{
+	UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] getPlayerByPlayerID"));
+	for (int32 b = 0; b < ActivePlayers.Num(); b++)
+	{
+		if (ActivePlayers[b].playerID == playerID) {
+			UE_LOG(LogTemp, Log, TEXT("[LEET] [UMyGameInstance] AuthorizePlayer - FOUND MATCHING playerID"));
+			FLeetActivePlayer* playerPointer = &ActivePlayers[b];
+			return playerPointer;
+		}
+	}
+
+	return nullptr;
 }

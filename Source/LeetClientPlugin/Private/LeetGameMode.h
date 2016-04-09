@@ -30,4 +30,6 @@ protected:
 public:
 	ALeetGameMode();
 	virtual void PreLogin(const FString& Options, const FString& Address, const TSharedPtr<const FUniqueNetId>& UniqueId, FString& ErrorMessage) override;
+
+	void Logout(AController* Exiting);
 };

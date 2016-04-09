@@ -82,3 +82,20 @@ FString ALeetGameMode::InitNewPlayer(APlayerController* NewPlayerController, con
 
 	return ErrorMessage;
 }
+
+void ALeetGameMode::Logout(AController* Exiting)
+{
+	// Handle users that disconnect from the server.
+	UE_LOG(LogTemp, Log, TEXT("[LEET] [ALeetGameMode] [Logout] "));
+	Super::Logout(Exiting);
+
+	//AMyPlayerState* ExitingPlayerState = Cast<AMyPlayerState>(Exiting->PlayerState);
+	//int ExitingPlayerId = ExitingPlayerState->PlayerId;
+
+	//UE_LOG(LogTemp, Log, TEXT("[LEET] [ALeetGameMode] [Logout] ExitingPlayerId: %i"), ExitingPlayerId);
+
+	ULeetGameInstance* TheGameInstance = Cast<ULeetGameInstance>(GetWorld()->GetGameInstance());
+
+	//TheGameInstance->DeAuthorizePlayer(ExitingPlayerId);
+
+}

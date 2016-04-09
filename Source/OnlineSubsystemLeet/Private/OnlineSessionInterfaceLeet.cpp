@@ -1213,6 +1213,8 @@ bool FOnlineSessionLeet::UnregisterPlayers(FName SessionName, const TArray< TSha
 	UE_LOG(LogTemp, Log, TEXT("[LEET] Online Session UNRegister Players"));
 	bool bSuccess = true;
 
+	// TODO: inform the gameinstance that the player has left
+
 	FNamedOnlineSession* Session = GetNamedSession(SessionName);
 	if (Session)
 	{
