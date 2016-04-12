@@ -28,6 +28,7 @@ namespace UnrealBuildTool.Rules
                     "CoreUObject",
                 "Engine",
                 "Json",
+                "JsonUtilities",
                 "HTTP",
                 "OnlineSubsystem",
                 "OnlineSubsystemUtils"

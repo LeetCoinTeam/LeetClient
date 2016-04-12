@@ -144,23 +144,16 @@ bool ULeetGameInstance::GetServerInfo()
 {
 
 	UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] GetServerInfo"));
-
 	FString nonceString = "10951350917635";
 	FString encryption = "off";  // Allowing unencrypted on sandbox for now.  
-
 	FString OutputString = "nonce=" + nonceString + "&encryption=" + encryption;
-
 	UE_LOG(LogTemp, Log, TEXT("ServerSessionHostAddress: %s"), *ServerSessionHostAddress);
 	UE_LOG(LogTemp, Log, TEXT("ServerSessionID: %s"), *ServerSessionID);
-
 	if (ServerSessionHostAddress.Len() > 1) {
 		OutputString = OutputString + "&session_host_address=" + ServerSessionHostAddress + "&session_id=" + ServerSessionID;
 	}
-
 	FString APIURI = "/api/v2/server/info";
-
 	bool requestSuccess = PerformHttpRequest(&ULeetGameInstance::GetServerInfoComplete, APIURI, OutputString);
-
 	return requestSuccess;
 }
 
@@ -204,7 +197,6 @@ void ULeetGameInstance::GetServerInfoComplete(FHttpRequestPtr HttpRequest, FHttp
 				if (incrementBTC && serverRakeBTCPercentage && leetRakePercentage) {
 					killRewardBTC = incrementBTC - ((incrementBTC * serverRakeBTCPercentage) + (incrementBTC * leetRakePercentage));
 				}
-				
 			}
 			else
 			{
@@ -213,6 +205,67 @@ void ULeetGameInstance::GetServerInfoComplete(FHttpRequestPtr HttpRequest, FHttp
 		}
 	}
 	UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [GetServerInfoComplete] Done!"));
+}
+
+
+bool ULeetGameInstance::GetServerLinks()
+{
+
+	UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] GetServerLinks"));
+	FString nonceString = "10951350917635";
+	FString encryption = "off";  // Allowing unencrypted on sandbox for now.  
+	FString OutputString = "nonce=" + nonceString + "&encryption=" + encryption;
+	FString APIURI = "/api/v2/server/links";
+	bool requestSuccess = PerformHttpRequest(&ULeetGameInstance::GetServerLinksComplete, APIURI, OutputString);
+	return requestSuccess;
+}
+
+void ULeetGameInstance::GetServerLinksComplete(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded)
+{
+	if (!HttpResponse.IsValid())
+	{
+		UE_LOG(LogTemp, Log, TEXT("Test failed. NULL response"));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Log, TEXT("Completed test [%s] Url=[%s] Response=[%d] [%s]"),
+			*HttpRequest->GetVerb(),
+			*HttpRequest->GetURL(),
+			HttpResponse->GetResponseCode(),
+			*HttpResponse->GetContentAsString());
+
+		const FString JsonRaw = *HttpResponse->GetContentAsString();
+
+		TSharedPtr<FJsonObject> JsonParsed;
+		TSharedRef<TJsonReader<TCHAR>> JsonReader = TJsonReaderFactory<TCHAR>::Create(JsonRaw);
+		if (FJsonSerializer::Deserialize(JsonReader, JsonParsed))
+		{
+			bool Authorization = JsonParsed->GetBoolField("authorization");
+			UE_LOG(LogTemp, Log, TEXT("Authorization"));
+			if (Authorization)
+			{
+				UE_LOG(LogTemp, Log, TEXT("Authorization True"));
+				// parse JSON
+				bool jsonConvertSuccess = FJsonObjectConverter::JsonObjectStringToUStruct<FLeetServerLinks>(*JsonRaw, &ServerLinks, 0, 0);
+				if (jsonConvertSuccess) {
+					UE_LOG(LogTemp, Log, TEXT("jsonConvertSuccess"));
+				}
+				else {
+					UE_LOG(LogTemp, Log, TEXT("jsonConvertFAIL"));
+				}
+				UE_LOG(LogTemp, Log, TEXT("Found %d Server Links"), ServerLinks.links.Num());
+				for (int32 b = 0; b < ServerLinks.links.Num(); b++)
+				{
+					UE_LOG(LogTemp, Log, TEXT("targetServerTitle: %s"), *ServerLinks.links[b].targetServerTitle);
+				}
+			}
+			else
+			{
+				UE_LOG(LogTemp, Log, TEXT("Authorization False"));
+			}
+		}
+	}
+	UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [GetServerLinksComplete] Done!"));
 }
 
 bool ULeetGameInstance::ActivatePlayer(FString PlatformID, int32 playerID)
@@ -231,10 +284,11 @@ bool ULeetGameInstance::ActivatePlayer(FString PlatformID, int32 playerID)
 	FLeetActivePlayer* CurrentActivePlayer = getPlayerByPlayerId(playerID);
 
 	UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] ActivePlayers.Num() > 0"));
-	for (int32 b = 0; b < ActivePlayers.Num(); b++)
+
+	for (int32 b = 0; b < PlayerRecord.ActivePlayers.Num(); b++)
 	{
-		UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [AuthorizePlayer] platformID: %s"), *ActivePlayers[b].platformID);
-		if (ActivePlayers[b].platformID == PlatformID) {
+		UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [AuthorizePlayer] platformID: %s"), *PlayerRecord.ActivePlayers[b].platformID);
+		if (PlayerRecord.ActivePlayers[b].platformID == PlatformID) {
 			UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] AuthorizePlayer - FOUND MATCHING platformID"));
 			platformIDFound = true;
 			ActivePlayerIndex = b;
@@ -252,7 +306,7 @@ bool ULeetGameInstance::ActivatePlayer(FString PlatformID, int32 playerID)
 		activeplayer.roundDeaths = 0;
 		activeplayer.roundKills = 0;
 
-		ActivePlayers.Add(activeplayer);
+		PlayerRecord.ActivePlayers.Add(activeplayer);
 
 		UE_LOG(LogTemp, Log, TEXT("PlatformID: %s"), *PlatformID);
 		UE_LOG(LogTemp, Log, TEXT("Object is: %s"), *GetName());
@@ -317,21 +371,27 @@ void ULeetGameInstance::ActivateRequestComplete(FHttpRequestPtr HttpRequest, FHt
 					int32 activeAuthorizedPlayers = 0;
 					int32 activePlayerIndex;
 
+					// TODO refactor this using our get_by_id function
+
 					UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [ActivateRequestComplete] ActivePlayers.Num() > 0"));
-					for (int32 b = 0; b < ActivePlayers.Num(); b++)
+					for (int32 b = 0; b < PlayerRecord.ActivePlayers.Num(); b++)
 					{
-						UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [ActivateRequestComplete] platformID: %s"), *ActivePlayers[b].platformID);
-						if (ActivePlayers[b].platformID == JsonParsed->GetStringField("player_platformid")) {
+						UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [ActivateRequestComplete] platformID: %s"), *PlayerRecord.ActivePlayers[b].platformID);
+						if (PlayerRecord.ActivePlayers[b].platformID == JsonParsed->GetStringField("player_platformid")) {
 							UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [ActivateRequestComplete] - FOUND MATCHING platformID"));
 							activePlayerIndex = b;
-							ActivePlayers[b].authorized = true;
-							ActivePlayers[b].playerTitle = JsonParsed->GetStringField("player_name");
-							ActivePlayers[b].playerKey = JsonParsed->GetStringField("player_key");
-							ActivePlayers[b].BTCHold = JsonParsed->GetIntegerField("player_btchold");
-							ActivePlayers[b].Rank = JsonParsed->GetIntegerField("player_rank");
+							PlayerRecord.ActivePlayers[b].authorized = true;
+							PlayerRecord.ActivePlayers[b].playerTitle = JsonParsed->GetStringField("player_name");
+							PlayerRecord.ActivePlayers[b].playerKey = JsonParsed->GetStringField("player_key");
+							PlayerRecord.ActivePlayers[b].BTCHold = JsonParsed->GetIntegerField("player_btchold");
+							PlayerRecord.ActivePlayers[b].Rank = JsonParsed->GetIntegerField("player_rank");
+							PlayerRecord.ActivePlayers[b].gamePlayerKey = JsonParsed->GetStringField("game_player_member_key");
+
+							// Since we have a match, we also want to get all of the game player data associated with this player.
+							GetGamePlayer(JsonParsed->GetStringField("game_player_member_key"), true);
 
 						}
-						if (ActivePlayers[b].authorized) {
+						if (PlayerRecord.ActivePlayers[b].authorized) {
 							activeAuthorizedPlayers++;
 						}
 
@@ -388,11 +448,11 @@ void ULeetGameInstance::ActivateRequestComplete(FHttpRequestPtr HttpRequest, FHt
 					bool platformIDFound = false;
 					FString jsonPlatformID = JsonParsed->GetStringField("player_platformid");
 
-					for (int32 b = 0; b < ActivePlayers.Num(); b++)
+					for (int32 b = 0; b < PlayerRecord.ActivePlayers.Num(); b++)
 					{
-						UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [ActivateRequestComplete] platformID: %s"), *ActivePlayers[b].platformID);
+						UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [ActivateRequestComplete] platformID: %s"), *PlayerRecord.ActivePlayers[b].platformID);
 						UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [ActivateRequestComplete] jsonPlatformID: %s"), *jsonPlatformID);
-						if (ActivePlayers[b].platformID == jsonPlatformID) {
+						if (PlayerRecord.ActivePlayers[b].platformID == jsonPlatformID) {
 							UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [ActivateRequestComplete] - Found active player record"));
 							platformIDFound = true;
 							activePlayerIndex = b;
@@ -411,7 +471,7 @@ void ULeetGameInstance::ActivateRequestComplete(FHttpRequestPtr HttpRequest, FHt
 							pc = Iterator->Get();
 
 							playerstateID = pc->PlayerState->PlayerId;
-							if (ActivePlayers[activePlayerIndex].playerID == playerstateID)
+							if (PlayerRecord.ActivePlayers[activePlayerIndex].playerID == playerstateID)
 							{
 								UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [ActivateRequestComplete] - playerID match - kicking back to connect"));
 								//FString UrlString = TEXT("/Game/MyConnectLevel");
@@ -436,6 +496,50 @@ void ULeetGameInstance::ActivateRequestComplete(FHttpRequestPtr HttpRequest, FHt
 	UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [ActivateRequestComplete] Done!"));
 }
 
+bool ULeetGameInstance::GetGamePlayer(FString PlayerKey, bool bAttemptLock)
+{
+	UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] GetGamePlayer"));
+
+	FString nonceString = "10951350917635";
+	FString encryption = "off";  // Allowing unencrypted on sandbox for now.  
+
+	FString OutputString = "nonce=" + nonceString + "&encryption=" + encryption;
+
+	UE_LOG(LogTemp, Log, TEXT("ServerSessionHostAddress: %s"), *ServerSessionHostAddress);
+	UE_LOG(LogTemp, Log, TEXT("ServerSessionID: %s"), *ServerSessionID);
+
+	if (ServerSessionHostAddress.Len() > 1) {
+		OutputString = OutputString + "&session_host_address=" + ServerSessionHostAddress + "&session_id=" + ServerSessionID;
+	}
+
+	if (bAttemptLock) {
+		OutputString = OutputString + "&lock=True";
+	}
+
+	FString APIURI = "/api/v2/game/player/" + PlayerKey;;
+
+	bool requestSuccess = PerformHttpRequest(&ULeetGameInstance::GetGamePlayerRequestComplete, APIURI, OutputString);
+
+	return requestSuccess;
+	return true;
+}
+
+void ULeetGameInstance::GetGamePlayerRequestComplete(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded)
+{
+	if (!HttpResponse.IsValid())
+	{
+		UE_LOG(LogTemp, Log, TEXT("Test failed. NULL response"));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Log, TEXT("Completed test [%s] Url=[%s] Response=[%d] [%s]"),
+			*HttpRequest->GetVerb(),
+			*HttpRequest->GetURL(),
+			HttpResponse->GetResponseCode(),
+			*HttpResponse->GetContentAsString());
+	}
+}
+
 
 bool ULeetGameInstance::DeActivatePlayer(int32 playerID)
 {
@@ -451,10 +555,10 @@ bool ULeetGameInstance::DeActivatePlayer(int32 playerID)
 	//UE_LOG(LogTemp, Log, TEXT("[LEET] [UMyGameInstance] [AuthorizePlayer] ActivePlayers: %i"), ActivePlayers);
 
 	UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] ActivePlayers.Num() > 0"));
-	for (int32 b = 0; b < ActivePlayers.Num(); b++)
+	for (int32 b = 0; b < PlayerRecord.ActivePlayers.Num(); b++)
 	{
 		//UE_LOG(LogTemp, Log, TEXT("[LEET] [UMyGameInstance] [DeAuthorizePlayer] playerID: %s"), ActivePlayers[b].playerID);
-		if (ActivePlayers[b].playerID == playerID) {
+		if (PlayerRecord.ActivePlayers[b].playerID == playerID) {
 			UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] DeActivatePlayer - FOUND MATCHING playerID"));
 			playerIDFound = true;
 			ActivePlayerIndex = b;
@@ -470,11 +574,11 @@ bool ULeetGameInstance::DeActivatePlayer(int32 playerID)
 		FLeetActivePlayer leavingplayer;
 		leavingplayer.playerID = playerID;
 		leavingplayer.authorized = false;
-		leavingplayer.platformID = ActivePlayers[ActivePlayerIndex].platformID;
+		leavingplayer.platformID = PlayerRecord.ActivePlayers[ActivePlayerIndex].platformID;
 
-		FString PlatformID = ActivePlayers[ActivePlayerIndex].platformID;
+		FString PlatformID = PlayerRecord.ActivePlayers[ActivePlayerIndex].platformID;
 
-		ActivePlayers[ActivePlayerIndex] = leavingplayer;
+		PlayerRecord.ActivePlayers[ActivePlayerIndex] = leavingplayer;
 
 		UE_LOG(LogTemp, Log, TEXT("PlatformID: %s"), *PlatformID);
 		UE_LOG(LogTemp, Log, TEXT("Object is: %s"), *GetName());
@@ -601,6 +705,120 @@ void ULeetGameInstance::OutgoingChatComplete(FHttpRequestPtr HttpRequest, FHttpR
 		//  We don't care too much about the results from this call.  
 	}
 	UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [OutgoingChatComplete] Done!"));
+}
+
+bool ULeetGameInstance::SubmitMatchResults()
+{
+
+	UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] SubmitMatchResults"));
+	UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] DEBUG TEST"));
+
+	FString player_dict_list = "%5B";  //TODO build this string urlencoded from json properly
+	bool FoundKills = false;
+	// get the data ready
+
+	for (int32 b = 0; b < PlayerRecord.ActivePlayers.Num(); b++)
+	{
+		//UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [DeAuthorizePlayer] playerID: %s"), ActivePlayers[b].playerID);
+		if (PlayerRecord.ActivePlayers[b].roundKills > 0) {
+			FoundKills = true;
+		}
+		player_dict_list = player_dict_list + "%7B%22deaths%22%3A" + FString::FromInt(PlayerRecord.ActivePlayers[b].roundDeaths) + "%2C";  // deaths
+		player_dict_list = player_dict_list + "%22killed%22%3A+%5B"; // killed -list, go through em.
+		for (int32 pkilledi = 0; pkilledi < PlayerRecord.ActivePlayers[b].killed.Num(); pkilledi++)
+		{
+			player_dict_list = player_dict_list + "%22" + PlayerRecord.ActivePlayers[b].killed[pkilledi] + "%22";
+			if (pkilledi < PlayerRecord.ActivePlayers[b].killed.Num() - 1) {
+				// If it's not the last one add a comma.  I know this is dumb and should just be json
+				player_dict_list = player_dict_list + "%2C+";
+			}
+		}
+		player_dict_list = player_dict_list + "%5D%2C";
+		player_dict_list = player_dict_list + "%22platformID%22%3A%22" + PlayerRecord.ActivePlayers[b].platformID + "%22%2C";
+		player_dict_list = player_dict_list + "%22kills%22%3A+" + FString::FromInt(PlayerRecord.ActivePlayers[b].roundKills) + "%2C";
+		player_dict_list = player_dict_list + "%22experience%22%3A+" + FString::FromInt(PlayerRecord.ActivePlayers[b].roundKills) + "%2C";
+		player_dict_list = player_dict_list + "%22weapon%22%3A%22Bomb%22";
+		player_dict_list = player_dict_list + "%7D";
+		if (b < PlayerRecord.ActivePlayers.Num() - 1) {
+			// If it's not the last one add a comma.  I know this is dumb and should just be json
+			player_dict_list = player_dict_list + "%2C+";
+		}
+	}
+	player_dict_list = player_dict_list + "%5D";
+
+	// DOing this in pure json for comparison
+	FString json_string;
+	
+	FJsonObjectConverter::UStructToJsonObjectString(FLeetActivePlayers::StaticStruct(), &PlayerRecord, json_string,0 ,0);
+
+	UE_LOG(LogTemp, Log, TEXT("player_dict_list: %s"), *player_dict_list);
+	UE_LOG(LogTemp, Log, TEXT("json_string: %s"), *json_string);
+
+	if (FoundKills == true) {
+		UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] SubmitMatchResults - found kills"));
+
+		FHttpModule* Http = &FHttpModule::Get();
+		if (!Http) { return false; }
+		if (!Http->IsHttpEnabled()) { return false; }
+
+		UE_LOG(LogTemp, Log, TEXT("Object is: %s"), *GetName());
+
+		FString nonceString = "10951350917635";
+		FString encryption = "off";  // Allowing unencrypted on sandbox for now.  
+
+
+		FString OutputString;
+
+		// Build Params as text string
+		OutputString = "nonce=" + nonceString + "&encryption=" + encryption + "&map_title=Demo&player_dict_list=" + player_dict_list;
+
+		FString APIURI = "/api/v2/match/results";;
+
+		bool requestSuccess = PerformHttpRequest(&ULeetGameInstance::SubmitMatchResultsComplete, APIURI, OutputString);
+
+		return requestSuccess;
+
+	}
+	else {
+		UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] SubmitMatchResults - No Kills - Ignoring"));
+	}
+	return true;
+
+}
+
+void ULeetGameInstance::SubmitMatchResultsComplete(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded)
+{
+	if (!HttpResponse.IsValid())
+	{
+		UE_LOG(LogTemp, Log, TEXT("Test failed. NULL response"));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Log, TEXT("Completed test [%s] Url=[%s] Response=[%d] [%s]"),
+			*HttpRequest->GetVerb(),
+			*HttpRequest->GetURL(),
+			HttpResponse->GetResponseCode(),
+			*HttpResponse->GetContentAsString());
+
+		FString JsonRaw = *HttpResponse->GetContentAsString();
+		TSharedPtr<FJsonObject> JsonParsed;
+		TSharedRef<TJsonReader<TCHAR>> JsonReader = TJsonReaderFactory<TCHAR>::Create(JsonRaw);
+		if (FJsonSerializer::Deserialize(JsonReader, JsonParsed))
+		{
+			bool Authorization = JsonParsed->GetBoolField("authorization");
+			//  We don't care too much about the results from this call.  
+			UE_LOG(LogTemp, Log, TEXT("Authorization"));
+			if (Authorization)
+			{
+				UE_LOG(LogTemp, Log, TEXT("Authorization True"));
+			}
+			else
+			{
+				UE_LOG(LogTemp, Log, TEXT("Authorization False"));
+			}
+		}
+	}
+	UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [SubmitMatchResults] Done!"));
 }
 
 
@@ -1070,6 +1288,7 @@ bool ULeetGameInstance::RegisterNewSession(FString IncServerSessionHostAddress, 
 	ServerSessionHostAddress = IncServerSessionHostAddress;
 	ServerSessionID = IncServerSessionID;
 	GetServerInfo();
+	GetServerLinks();
 	return true;
 }
 
@@ -1174,14 +1393,162 @@ void ULeetGameInstance::BeginLogin(FString InType, FString InId, FString InToken
 FLeetActivePlayer* ULeetGameInstance::getPlayerByPlayerId(int32 playerID)
 {
 	UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] getPlayerByPlayerID"));
-	for (int32 b = 0; b < ActivePlayers.Num(); b++)
+	for (int32 b = 0; b < PlayerRecord.ActivePlayers.Num(); b++)
 	{
-		if (ActivePlayers[b].playerID == playerID) {
+		if (PlayerRecord.ActivePlayers[b].playerID == playerID) {
 			UE_LOG(LogTemp, Log, TEXT("[LEET] [UMyGameInstance] AuthorizePlayer - FOUND MATCHING playerID"));
-			FLeetActivePlayer* playerPointer = &ActivePlayers[b];
+			FLeetActivePlayer* playerPointer = &PlayerRecord.ActivePlayers[b];
 			return playerPointer;
 		}
 	}
 
 	return nullptr;
+}
+
+bool ULeetGameInstance::RecordKill(int32 killerPlayerID, int32 victimPlayerID)
+{
+	UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [RecordKill] "));
+	UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [RecordKill] killerPlayerID: %i"), killerPlayerID);
+	UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [RecordKill] victimPlayerID: %i "), victimPlayerID);
+
+	// get attacker activeplayer
+	bool attackerPlayerIDFound = false;
+	int32 killerPlayerIndex = 0;
+	// sum all the round kills while we're looping
+	int32 roundKillsTotal = 0;
+
+	// TODO refactor this to use our get player function instead
+
+	for (int32 b = 0; b < PlayerRecord.ActivePlayers.Num(); b++)
+	{
+		//UE_LOG(LogTemp, Log, TEXT("[LEET] [UMyGameInstance] [DeAuthorizePlayer] playerID: %s"), ActivePlayers[b].playerID);
+		if (PlayerRecord.ActivePlayers[b].playerID == killerPlayerID) {
+			UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [RecordKill] - FOUND MATCHING killer playerID"));
+			attackerPlayerIDFound = true;
+			killerPlayerIndex = b;
+		}
+		roundKillsTotal = roundKillsTotal + PlayerRecord.ActivePlayers[b].roundKills;
+	}
+	// we need one more since this kill has not been added to the list yet
+	roundKillsTotal = roundKillsTotal + 1;
+
+	if (killerPlayerID == victimPlayerID) {
+		UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [RecordKill] suicide"));
+	}
+	else {
+		UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [RecordKill] Not a suicide"));
+
+		// get victim activeplayer
+		bool victimPlayerIDFound = false;
+		int32 victimPlayerIndex = 0;
+
+		for (int32 b = 0; b < PlayerRecord.ActivePlayers.Num(); b++)
+		{
+			//UE_LOG(LogTemp, Log, TEXT("[LEET] [UMyGameInstance] [DeAuthorizePlayer] playerID: %s"), ActivePlayers[b].playerID);
+			if (PlayerRecord.ActivePlayers[b].playerID == victimPlayerID) {
+				UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [RecordKill] - FOUND MATCHING victim playerID"));
+				victimPlayerIDFound = true;
+				victimPlayerIndex = b;
+			}
+		}
+
+		// check to see if this victim is already in the kill list
+		bool victimIDFoundInKillList = false;
+
+		for (int32 b = 0; b < PlayerRecord.ActivePlayers[killerPlayerIndex].killed.Num(); b++)
+		{
+			if (PlayerRecord.ActivePlayers[killerPlayerIndex].killed[b] == PlayerRecord.ActivePlayers[victimPlayerIndex].playerKey)
+			{
+				UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [RecordKill] - Victim already in kill list"));
+				victimIDFoundInKillList = true;
+			}
+		}
+
+		if (victimIDFoundInKillList == false) {
+			UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [RecordKill] - Adding victim to kill list"));
+			PlayerRecord.ActivePlayers[killerPlayerIndex].killed.Add(PlayerRecord.ActivePlayers[victimPlayerIndex].playerKey);
+		}
+
+		// Increase the killer's kill count
+		PlayerRecord.ActivePlayers[killerPlayerIndex].roundKills = PlayerRecord.ActivePlayers[killerPlayerIndex].roundKills + 1;
+		// Increase the killer's balance
+		PlayerRecord.ActivePlayers[killerPlayerIndex].BTCHold = PlayerRecord.ActivePlayers[killerPlayerIndex].BTCHold + killRewardBTC;
+		// And increase the victim's deaths
+		PlayerRecord.ActivePlayers[victimPlayerIndex].roundDeaths = PlayerRecord.ActivePlayers[victimPlayerIndex].roundDeaths + 1;
+		// Decrease the victim's balance
+		PlayerRecord.ActivePlayers[victimPlayerIndex].BTCHold = PlayerRecord.ActivePlayers[victimPlayerIndex].BTCHold - incrementBTC;
+
+		// TODO kick the victim if it falls below the minimum?
+
+		APlayerController* pc = NULL;
+		// Send out a chat message to all players
+		FText chatSender = NSLOCTEXT("LEET", "chatSender", "SYSTEM");
+		FText chatMessageText = NSLOCTEXT("LEET", "chatMessageText", " killed ");  //TODO figure out how to set up this string correctly.
+
+		for (FConstPlayerControllerIterator Iterator = GetWorld()->GetPlayerControllerIterator(); Iterator; ++Iterator)
+		{
+			UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [RecordKill] - Sending text chat"));
+			pc = Iterator->Get();
+			APlayerState* thisPlayerState = pc->PlayerState;
+			ALeetPlayerState* thisMyPlayerState = Cast<ALeetPlayerState>(thisPlayerState);
+			thisMyPlayerState->ReceiveChatMessage(chatSender, chatMessageText);
+
+			/*
+			// old way
+			TSubclassOf<APlayerController> thisPlayerController = pc;
+			AMyPlayerController* thisPlayerController = Cast<AMyPlayerController>(pc);
+			if (thisPlayerController) {
+				UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [RecordKill] - Cast Controller success"));
+
+				APlayerState* thisPlayerState = thisPlayerController->PlayerState;
+				AMyPlayerState* thisMyPlayerState = Cast<AMyPlayerState>(thisPlayerState);
+				if (thisMyPlayerState) {
+					UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [RecordKill] - Cast State success"));
+					thisMyPlayerState->ReceiveChatMessage(chatSender, chatMessageText);
+				}
+			}
+			*/
+		}
+
+
+	}
+
+	// TODO deal with this
+	/*
+	//Check to see if the game is over
+	if (roundKillsTotal >= MinimumKillsBeforeResultsSubmit) {
+		UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [RecordKill] - Ending the Game"));
+		bool gamesubmitted = SubmitMatchResults();
+
+		//Deauthorize everyone
+		for (int32 b = 0; b < ActivePlayers.Num(); b++)
+		{
+			DeAuthorizePlayer(ActivePlayers[b].playerID);
+		}
+
+		// We might need some kind of delay in here because we're going to wipe this data.  plz don't crash
+
+		// Reset the active players
+		ActivePlayers.Empty();
+		// Kick everyone back to login
+		FString UrlString = TEXT("/Game/MyLoginLevel?listen");
+		GetWorld()->GetAuthGameMode()->bUseSeamlessTravel = true;
+		GetWorld()->ServerTravel(UrlString);
+
+	}
+	else {
+		// Check to see if the round is over
+		if (roundKillsTotal >= MinimumPlayerDeathsBeforeRoundReset) {
+			UE_LOG(LogTemp, Log, TEXT("[LEET] [UMyGameInstance] [RecordKill] - Ending the Round"));
+			// travel to the third person map
+			FString UrlString = TEXT("/Game/ThirdPersonCPP/Maps/ThirdPersonExampleMap?listen");
+			GetWorld()->GetAuthGameMode()->bUseSeamlessTravel = true;
+			GetWorld()->ServerTravel(UrlString);
+		}
+	}
+	*/
+
+
+
+	return true;
 }

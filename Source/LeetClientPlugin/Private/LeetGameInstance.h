@@ -26,6 +26,7 @@ namespace std { typedef type_info type_info; }
 #include "Engine/GameInstance.h"
 #include "Http.h"
 #include "Json.h"
+#include "JsonUtilities.h"
 #include "Base64.h"
 #include <string>
 
@@ -51,18 +52,86 @@ USTRUCT()
 struct FLeetActivePlayer {
 
 	GENERATED_USTRUCT_BODY()
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="LEET")
 	int32 playerID;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LEET")
 	FString platformID;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LEET")
 	FString playerKey;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LEET")
 	FString playerTitle;
-	//FString title; 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LEET")
 	bool authorized;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LEET")
 	int32 roundKills;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LEET")
 	int32 roundDeaths;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LEET")
 	TArray<FString> killed;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LEET")
 	int32 Rank;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LEET")
 	int32 BTCHold;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LEET")
+	FString gamePlayerKey;
+
 };
+
+USTRUCT()
+struct FLeetActivePlayers {
+
+	GENERATED_USTRUCT_BODY()
+		UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LEET")
+		TArray<FLeetActivePlayer> ActivePlayers;
+};
+
+USTRUCT()
+struct FLeetServerLink {
+
+	GENERATED_USTRUCT_BODY()
+		UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LEET")
+		FString targetServerTitle;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LEET")
+		FString targetServerKey;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LEET")
+		bool targetStatusIsDynamic;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LEET")
+		bool targetStatusProvisioned;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LEET")
+		bool targetStatusOnline;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LEET")
+		bool targetStatusFull;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LEET")
+		bool targetStatusDead;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LEET")
+		bool permissionCanMount;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LEET")
+		bool permissionCanPlayerTravel;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LEET")
+		bool permissionCanDismount;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LEET")
+		FString resourcesUsedToTravel;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LEET")
+		FString resourceAmountsUsedToTravel;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LEET")
+		int32 btcCostToTravel;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LEET")
+		float coordLocationX;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LEET")
+		float coordLocationY;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LEET")
+		float coordLocationZ;
+};
+
+USTRUCT()
+struct FLeetServerLinks {
+
+	GENERATED_USTRUCT_BODY()
+		UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LEET")
+		TArray<FLeetServerLink> links;
+};
+
+
 
 class ALeetGameSession;
 
@@ -104,7 +173,12 @@ class LEETCLIENTPLUGIN_API ULeetGameInstance : public UGameInstance
 
 	//ULeetGameInstance();
 
-	TArray<FLeetActivePlayer> ActivePlayers;
+
+	// Moving this to a struct for easy JSON encode/decode
+	//TArray<FLeetActivePlayer> ActivePlayers;
+	FLeetActivePlayers PlayerRecord;
+
+	FLeetServerLinks ServerLinks;
 
 	bool PerformHttpRequest(void(ULeetGameInstance::*delegateCallback)(FHttpRequestPtr, FHttpResponsePtr, bool), FString APIURI, FString ArgumentString);
 
@@ -158,6 +232,9 @@ public:
 	bool GetServerInfo();
 	void GetServerInfoComplete(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded);
 
+	bool GetServerLinks();
+	void GetServerLinksComplete(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded);
+
 	UPROPERTY(BlueprintReadOnly)
 	TArray<FLeetSessionSearchResult> LeetSessionSearchResults;
 
@@ -186,13 +263,6 @@ public:
 	// Activate a player against the leet api
 	UFUNCTION(BlueprintCallable, Category = "LEET")
 	bool ActivatePlayer(FString PlatformID, int32 playerID);
-	/**
-	* Delegate called when the request completes
-	*
-	* @param HttpRequest - object that started/processed the request
-	* @param HttpResponse - optional response object if request completed
-	* @param bSucceeded - true if Url connection was made and response was received
-	*/
 	void ActivateRequestComplete(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded);
 
 	bool DeActivatePlayer(int32 playerID);
@@ -201,8 +271,19 @@ public:
 	bool OutgoingChat(int32 playerID, FText message);
 	void OutgoingChatComplete(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded);
 
-	// Get a player our of our custom array struct
+	bool SubmitMatchResults();
+	void SubmitMatchResultsComplete(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded);
+
+	bool GetGamePlayer(FString PlayerKey, bool bAttemptLock);
+	void GetGamePlayerRequestComplete(FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded);
+
+	// Get a player out of our custom array struct
 	FLeetActivePlayer* getPlayerByPlayerId(int32 playerID);
+
+	// A Kill occurred.
+	// Record it.
+	UFUNCTION(BlueprintCallable, Category = "LEET")
+	bool RecordKill(int32 killerPlayerID, int32 victimPlayerID);
 
 private:
 	UPROPERTY(config)

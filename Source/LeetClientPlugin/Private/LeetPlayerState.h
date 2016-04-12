@@ -10,6 +10,40 @@
  *
  */
 
+USTRUCT()
+struct FLeetInventoryItemStat {
+
+	GENERATED_USTRUCT_BODY()
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LEET")
+		FString itemStatKey;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LEET")
+		int32 itemStatValue;
+
+};
+
+USTRUCT()
+struct FLeetInventoryItem {
+
+	GENERATED_USTRUCT_BODY()
+		UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LEET")
+		int32 quantity;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LEET")
+		FString itemId;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LEET")
+		FString itemTitle;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LEET")
+		TArray<FLeetInventoryItemStat> InventoryItemStats;
+
+};
+
+USTRUCT()
+struct FLeetInventory {
+
+	GENERATED_USTRUCT_BODY()
+		UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LEET")
+		TArray<FLeetInventoryItem> InventoryItems;
+};
+
 //THis delegate is working.
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FTextDelegate, FText, chatSender, FText, chatMessage);
 
@@ -18,6 +52,8 @@ UCLASS()
 class LEETCLIENTPLUGIN_API ALeetPlayerState : public APlayerState
 {
 	GENERATED_BODY()
+
+		FLeetInventory Inventory;
 
 public:
 	// This is the function that gets called in the widget Blueprint
