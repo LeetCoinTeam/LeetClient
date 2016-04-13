@@ -9,7 +9,7 @@
 UCLASS()
 class LEETCLIENTPLUGIN_API ALeetGameMode : public AGameMode
 {
-	GENERATED_BODY()
+	GENERATED_UCLASS_BODY()
 
 
 protected:
@@ -28,7 +28,7 @@ protected:
 
 
 public:
-	ALeetGameMode();
+	//ALeetGameMode();
 	virtual void PreLogin(const FString& Options, const FString& Address, const TSharedPtr<const FUniqueNetId>& UniqueId, FString& ErrorMessage) override;
 
 	void Logout(AController* Exiting);

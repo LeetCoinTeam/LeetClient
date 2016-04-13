@@ -279,6 +279,7 @@ public:
 
 	// Get a player out of our custom array struct
 	FLeetActivePlayer* getPlayerByPlayerId(int32 playerID);
+	FLeetActivePlayer* getPlayerByPlayerKey(FString playerKey);
 
 	// A Kill occurred.
 	// Record it.

@@ -388,6 +388,9 @@ void ULeetGameInstance::ActivateRequestComplete(FHttpRequestPtr HttpRequest, FHt
 							PlayerRecord.ActivePlayers[b].gamePlayerKey = JsonParsed->GetStringField("game_player_member_key");
 
 							// Since we have a match, we also want to get all of the game player data associated with this player.
+							
+
+							
 							GetGamePlayer(JsonParsed->GetStringField("game_player_member_key"), true);
 
 						}
@@ -537,6 +540,39 @@ void ULeetGameInstance::GetGamePlayerRequestComplete(FHttpRequestPtr HttpRequest
 			*HttpRequest->GetURL(),
 			HttpResponse->GetResponseCode(),
 			*HttpResponse->GetContentAsString());
+		FString JsonRaw = *HttpResponse->GetContentAsString();
+		TSharedPtr<FJsonObject> JsonParsed;
+		TSharedRef<TJsonReader<TCHAR>> JsonReader = TJsonReaderFactory<TCHAR>::Create(JsonRaw);
+		if (FJsonSerializer::Deserialize(JsonReader, JsonParsed))
+		{
+			bool Authorization = JsonParsed->GetBoolField("authorization");
+			UE_LOG(LogTemp, Log, TEXT("Authorization"));
+			if (Authorization)
+			{
+				UE_LOG(LogTemp, Log, TEXT("Authorization True"));
+				APlayerController* pc = NULL;
+				FString platformId = JsonParsed->GetStringField("platformId");
+
+				FLeetActivePlayer* activePlayer =  getPlayerByPlayerKey(JsonParsed->GetStringField("playerKey"));
+				for (FConstPlayerControllerIterator Iterator = GetWorld()->GetPlayerControllerIterator(); Iterator; ++Iterator)
+				{
+					UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [GetGamePlayerRequestComplete] - Looking for player Controller"));
+					pc = Iterator->Get();
+					APlayerState* thisPlayerState = pc->PlayerState;
+					ALeetPlayerState* thisMyPlayerState = Cast<ALeetPlayerState>(thisPlayerState);
+
+					FString playerstatePlatformID = thisMyPlayerState->platformId;
+					UE_LOG(LogTemp, Log, TEXT("playerstatePlatformID: %s"), *playerstatePlatformID);
+					FString playerArrayPlatformId = activePlayer->platformID;
+					UE_LOG(LogTemp, Log, TEXT("playerArrayPlatformId: %s"), *playerArrayPlatformId);
+
+					if (playerstatePlatformID == playerArrayPlatformId)
+					{
+						UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] [GetGamePlayerRequestComplete] - platformID match - Setting Game player state"));
+					}
+				}
+			}
+		}
 	}
 }
 
@@ -1396,12 +1432,25 @@ FLeetActivePlayer* ULeetGameInstance::getPlayerByPlayerId(int32 playerID)
 	for (int32 b = 0; b < PlayerRecord.ActivePlayers.Num(); b++)
 	{
 		if (PlayerRecord.ActivePlayers[b].playerID == playerID) {
-			UE_LOG(LogTemp, Log, TEXT("[LEET] [UMyGameInstance] AuthorizePlayer - FOUND MATCHING playerID"));
+			UE_LOG(LogTemp, Log, TEXT("[LEET] [UMyGameInstance] getPlayerByPlayerID - FOUND MATCHING playerID"));
 			FLeetActivePlayer* playerPointer = &PlayerRecord.ActivePlayers[b];
 			return playerPointer;
 		}
 	}
+	return nullptr;
+}
 
+FLeetActivePlayer* ULeetGameInstance::getPlayerByPlayerKey(FString playerKey)
+{
+	UE_LOG(LogTemp, Log, TEXT("[LEET] [ULeetGameInstance] getPlayerByPlayerKey"));
+	for (int32 b = 0; b < PlayerRecord.ActivePlayers.Num(); b++)
+	{
+		if (PlayerRecord.ActivePlayers[b].playerKey == playerKey) {
+			UE_LOG(LogTemp, Log, TEXT("[LEET] [UMyGameInstance] getPlayerByPlayerKey - FOUND MATCHING playerID"));
+			FLeetActivePlayer* playerPointer = &PlayerRecord.ActivePlayers[b];
+			return playerPointer;
+		}
+	}
 	return nullptr;
 }
 

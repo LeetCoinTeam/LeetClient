@@ -301,6 +301,7 @@ void ALeetGameSession::RegisterPlayer(APlayerController* NewPlayer, const TShare
 		//FString playerUniqueId = UniqueId->ToString(); // assertion fail
 
 		UE_LOG(LogTemp, Log, TEXT("[LEET] [ALeetGameSession] RegisterPlayer playerId: %d"), playerId);
+		//UE_LOG(LogTemp, Log, TEXT("[LEET] [ALeetGameSession] RegisterPlayer UniqueId: %s"), *UniqueId->ToString()); //assertionFail
 		//UE_LOG(LogTemp, Log, TEXT("[LEET] [ALeetGameSession] RegisterPlayer playerUniqueId: %s"), *playerUniqueId);  // assertion fail
 
 		UE_LOG(LogTemp, Log, TEXT("[LEET] [ALeetGameSession] RegisterPlayer NewPlayer->PlayerState->PlayerName: %s"), *NewPlayer->PlayerState->PlayerName);

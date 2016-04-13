@@ -7,10 +7,12 @@
 //#include "../../LEETAPIDEMO4/Plugins/LeetClient/Source/LeetClientPlugin/Private/LeetGameSession.h"
 //#include "../../LEETAPIDEMO4/Plugins/LeetClient/Source/LeetClientPlugin/Private/LeetGameInstance.h"
 
-ALeetGameMode::ALeetGameMode()
+ALeetGameMode::ALeetGameMode(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	// set default pawn class to our flying pawn
 	DefaultPawnClass = ALeetPawn::StaticClass();
+	PlayerStateClass = ALeetPlayerState::StaticClass();
+
 }
 
 /** Returns game session class to use */
@@ -45,6 +47,17 @@ FString ALeetGameMode::InitNewPlayer(APlayerController* NewPlayerController, con
 	UE_LOG(LogTemp, Log, TEXT("[LEET] [ALeetGameMode] InitNewPlayer Param1: %s"), *Name);
 
 	FString ErrorMessage;
+
+	//  we need to set the platformID in the player state so we can find this player again.
+	ALeetPlayerState* PlayerS = Cast<ALeetPlayerState>(NewPlayerController->PlayerState);
+
+	if (PlayerS)
+	{
+		UE_LOG(LogTemp, Log, TEXT("[LEET] [ALeetGameMode] [InitNewPlayer] - Found Leet player state"));
+		PlayerS->platformId = Name;
+		UE_LOG(LogTemp, Log, TEXT("[LEET] [ALeetGameMode] [InitNewPlayer] - Set platformID"));
+	}
+
 
 	/* At this point we want to be able to deny the Login, but we need to do it over http, which requires a delegate.
 	// So we're just going to allow login, then kick them if the http request comes up negative

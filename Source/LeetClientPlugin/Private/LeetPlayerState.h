@@ -54,6 +54,7 @@ class LEETCLIENTPLUGIN_API ALeetPlayerState : public APlayerState
 	GENERATED_BODY()
 
 		FLeetInventory Inventory;
+	
 
 public:
 	// This is the function that gets called in the widget Blueprint
@@ -67,5 +68,7 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 	FTextDelegate OnTextDelegate;
+
+	FString platformId;
 
 };
